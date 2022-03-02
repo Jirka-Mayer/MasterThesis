@@ -12,4 +12,16 @@ Run using:
 
 ```
 python3 main.py
+
+    --epochs 10             Number of epochs
+    --batch_size 128        Batch size
+    --scatter_count 1024    Number of validation set datapoints to scatter
 ```
+
+Produces the following manifold:
+
+![ManifoldCombined](combined.png)
+
+![Scatter](scatter.png)
+
+![Manifold](manifold.png)

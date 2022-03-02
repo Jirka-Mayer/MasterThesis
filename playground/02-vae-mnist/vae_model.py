@@ -140,5 +140,34 @@ class VaeModel(tf.keras.Model):
             axis=0
         )
 
+        plt.figure(figsize=(10, 20))
         plt.imshow(np.dstack([image, image, image]))
-        plt.show()
+        plt.savefig(
+            "fig/manifold-{:02d}.png".format(epoch),
+            bbox_inches="tight"
+        )
+        plt.clf()
+
+    def scatter(self, epoch, images, labels):
+        embeddings = self.encoder(
+            images,
+            training=False
+        )["z_mean"]
+
+        fig = plt.figure(figsize=(10, 10))
+
+        for i in range(10):
+            plt.scatter(
+                x=embeddings[labels == i][:,0],
+                y=-embeddings[labels == i][:,1], # flip to match manifold image
+                label=str(i)
+            )
+        
+        plt.legend(loc="lower right")
+        plt.xlim([-3, 3])
+        plt.ylim([-3, 3])
+        plt.savefig(
+            "fig/scatter-{:02d}.png".format(epoch),
+            bbox_inches="tight"
+        )
+        plt.clf()

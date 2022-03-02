@@ -10,12 +10,15 @@ from vae_model import VaeModel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=128, type=int, help="Batch size.")
+parser.add_argument("--scatter_count", default=1024, type=int, help="Images to scatter.")
 parser.add_argument("--z_dim", default=2, type=int, help="Dimension of Z.")
 parser.add_argument("--epochs", default=10, type=int, help="Number of epochs.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 
 def main(args):
     tf.random.set_seed(args.seed)
+
+    os.makedirs("fig", exist_ok=True)
 
     ### Prepare the dataset ###
 
@@ -39,9 +42,13 @@ def main(args):
 
     ds_test = ds_test \
         .map(normalize_img, num_parallel_calls=tf.data.AUTOTUNE) \
-        .batch(args.batch_size) \
+        .batch(args.scatter_count) \
         .cache() \
         .prefetch(tf.data.AUTOTUNE)
+
+    for batch in ds_test:
+        scatter_images, scatter_labels = batch
+        break
 
     ### Create the model ###
 
@@ -64,6 +71,9 @@ def main(args):
         callbacks=[
             tf.keras.callbacks.LambdaCallback(
                 on_epoch_end=model.generate
+            ),
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda e, l: model.scatter(e, scatter_images, scatter_labels)
             )
         ]
     )

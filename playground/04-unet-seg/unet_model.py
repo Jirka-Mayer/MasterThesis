@@ -10,7 +10,7 @@ class UnetModel(tf.keras.Model):
         super().__init__()
 
         self._seed = seed
-        self._segmentation_classes = 10
+        self._segmentation_classes = 4
         self._inner_features = 8
 
         ### Define the UNet model ###
@@ -146,11 +146,12 @@ class UnetModel(tf.keras.Model):
             # all masks should reconstruct the input image
             identity_loss = self.compiled_loss(
                 y_true=tf.concat(
-                    [pass_1_input * 0] + [pass_1_input for _ in range(self._segmentation_classes - 1)],
+                    [pass_1_input * 0] + 
+                    [pass_1_input for _ in range(self._segmentation_classes - 1)],
                     axis=3
                 ),
+                #y_true = pass_1_input,
                 y_pred=pass_1_output,
-                sample_weight=None,
                 regularization_losses=self.losses
             )
             # identity_loss = tf.losses.BinaryCrossentropy(from_logits=False)(
@@ -182,34 +183,34 @@ class UnetModel(tf.keras.Model):
             #     y_pred=tf.reduce_mean(pass_1_output_logits, axis=(1, 2))
             # )
             
-            # def prepare_sup_output(args):
-            #     input_slice, label = args
-            #     channel_stack = tf.stack(
-            #         [
-            #             input_slice
-            #             # input_slice * tf.cond(
-            #             #     tf.constant(i, dtype=tf.int64) == label,
-            #             #     lambda: 0.0,
-            #             #     lambda: 1.0
-            #             # )
-            #             for i in range(self._segmentation_classes)
-            #         ],
-            #         axis=2
-            #     )
-            #     return channel_stack, label
+            def prepare_sup_output(args):
+                input_slice, label = args
+                channel_stack = tf.concat(
+                    [
+                        #input_slice
+                        input_slice * tf.cond(
+                            tf.constant(i, dtype=tf.int64) == label,
+                            lambda: 1.0,
+                            lambda: 0.0
+                        )
+                        for i in range(self._segmentation_classes)
+                    ],
+                    axis=2
+                )
+                return channel_stack, label
 
-            # supervised_output, _ = tf.map_fn(
-            #     fn=prepare_sup_output,
-            #     elems=(pass_1_input, labels)
-            # )
+            supervised_output, _ = tf.map_fn(
+                fn=prepare_sup_output,
+                elems=(pass_1_input, labels)
+            )
             
-            # supervised_loss = tf.losses.BinaryCrossentropy(from_logits=False)(
-            #     y_true=supervised_output,
-            #     y_pred=pass_1_output
-            # )
+            supervised_loss = tf.losses.BinaryCrossentropy(from_logits=False)(
+                y_true=supervised_output,
+                y_pred=pass_1_output
+            )
 
             #loss = reconstruction_loss + mask_stabilization_loss
-            loss = identity_loss
+            loss = supervised_loss
 
         gradients = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_weights))

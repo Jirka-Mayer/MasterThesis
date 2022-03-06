@@ -60,6 +60,10 @@ def main(args):
 
     ### Perform training ###
 
+    # DEBUG: visualization of the sampled Z images
+    # model.visualize_z(model.sample_z(scatter_images[:10]))
+    # exit()
+
     # draw the initial random image
     # model.scatter(-1, scatter_images, scatter_labels)
     model.visualize_sample(-1, scatter_images[:10], scatter_labels[:10])

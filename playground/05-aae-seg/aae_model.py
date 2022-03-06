@@ -4,12 +4,61 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+def upsample(output_features, x):
+    # TODO: try experimenting with different upsamplings
+    # a) transposed upconv
+    # b) bilinear interpolation
+    # ...
+    x = tf.keras.layers.UpSampling2D(interpolation="nearest")(x)
+    return tf.keras.layers.Conv2D(
+        output_features, kernel_size=1,
+        activation="relu", padding="same"
+    )(x)
+
+
+def unet_level(depth, max_depth, inner_features, x):
+    level_features = inner_features * (1 << depth)
+    
+    x = tf.keras.layers.Conv2D(
+        level_features, kernel_size=3,
+        activation="relu", padding="same"
+    )(x)
+    x = tf.keras.layers.Conv2D(
+        level_features, kernel_size=3,
+        activation="relu", padding="same"
+    )(x)
+
+    if depth == max_depth: # lowest level stops the recursion
+        return x
+    
+    skip_connection = x
+    
+    x = tf.keras.layers.MaxPool2D()(x)
+    x = unet_level(depth + 1, max_depth, inner_features, x)
+    x = upsample(output_features=level_features, x=x)
+    
+    x = tf.concat((skip_connection, x), axis=3)
+    
+    x = tf.keras.layers.Conv2D(
+        level_features, kernel_size=3,
+        activation="relu", padding="same"
+    )(x)
+    x = tf.keras.layers.Conv2D(
+        level_features, kernel_size=3,
+        activation="relu", padding="same"
+    )(x)
+
+    return x
+
+
 class AaeModel(tf.keras.Model):
     def __init__(self, seed):
         super().__init__()
 
         self._seed = seed
-        self._z_dim = 2 # number of segmentation channels
+        self._z_dim = 4 # number of segmentation channels
+        # NOTE: due to softmax, the first channel is the mask negative
+        self._inner_features = 8 # unet base channel depth
         self._image_shape = (28, 28, 1)
         self._image_pixels = np.prod(self._image_shape)
         self._z_prior = tfp.distributions.Normal(
@@ -18,6 +67,7 @@ class AaeModel(tf.keras.Model):
             loc=tf.zeros(self._z_dim),
             scale=tf.ones(self._z_dim)
         )
+        self._unet_encoder = True
 
         ### Define the encoder model ###
 
@@ -25,16 +75,29 @@ class AaeModel(tf.keras.Model):
             shape=self._image_shape,
             name="encoder_input"
         )
-        x = tf.keras.layers.Flatten()(encoder_input)
-        x = tf.keras.layers.Dense(500, activation="relu")(x)
-        x = tf.keras.layers.Dense(500, activation="relu")(x)
-        x = tf.keras.layers.Dense(
-            self._image_pixels * self._z_dim,
-            activation="sigmoid"
-        )(x)
-        encoder_output = tf.keras.layers.Reshape(
-            target_shape=(28, 28, self._z_dim)
-        )(x)
+
+        if self._unet_encoder:
+            x = unet_level(
+                depth=0,
+                max_depth=2,
+                inner_features=self._inner_features,
+                x=encoder_input
+            )
+            encoder_output = tf.keras.layers.Conv2D(
+                self._z_dim, kernel_size=1,
+                activation="softmax", padding="same"
+            )(x)
+        else:
+            x = tf.keras.layers.Flatten()(encoder_input)
+            x = tf.keras.layers.Dense(500, activation="relu")(x)
+            x = tf.keras.layers.Dense(500, activation="relu")(x)
+            x = tf.keras.layers.Dense(
+                self._image_pixels * self._z_dim,
+                activation="sigmoid"
+            )(x)
+            encoder_output = tf.keras.layers.Reshape(
+                target_shape=(28, 28, self._z_dim)
+            )(x)
         
         self.encoder = tf.keras.Model(
             inputs=encoder_input,
@@ -85,24 +148,33 @@ class AaeModel(tf.keras.Model):
     @tf.function
     def sample_z(self, images):
         """Samples the Z prior distribution from a given batch of images"""
+        # TODO: SAMPLE SHAPES ONLY (coz softmax)!!! AND COMPLETELY RANDOMIZE!!!
+        # TODO: also make the first image a negative
+        return tf.concat(
+            [1.0 - tf.random.shuffle(images, seed=self._seed)] + \
+            [tf.random.shuffle(images, seed=self._seed + 1 + i) for i in range(self._z_dim - 1)],
+            axis=3
+        )
+        
+        # LEGACY CODE:
         # it needs these images to sample the geometry
         # and to determine the batch size
-        batch_size = tf.shape(images)[0]
-        z_distribution = tfp.distributions.Uniform(
-            low=tf.fill([batch_size, self._z_dim], 0.0),
-            high=tf.fill([batch_size, self._z_dim], 1.0)
-        )
-        z_sampled_color = z_distribution.sample(seed=self._seed)
-        z_sampled_geometry = tf.random.shuffle(images, seed=self._seed)
-        z_sampled = tf.map_fn(
-            fn=lambda x: tf.concat(
-                [x[0] * x[1][i] for i in range(self._z_dim)],
-                axis=2
-            ),
-            elems=[z_sampled_geometry, z_sampled_color],
-            fn_output_signature=tf.TensorSpec([28, 28, self._z_dim])
-        )
-        return z_sampled
+        # batch_size = tf.shape(images)[0]
+        # z_distribution = tfp.distributions.Uniform(
+        #     low=tf.fill([batch_size, self._z_dim], 0.0),
+        #     high=tf.fill([batch_size, self._z_dim], 1.0)
+        # )
+        # z_sampled_color = z_distribution.sample(seed=self._seed)
+        # z_sampled_geometry = tf.random.shuffle(images, seed=self._seed)
+        # z_sampled = tf.map_fn(
+        #     fn=lambda x: tf.concat(
+        #         [x[0] * x[1][i] for i in range(self._z_dim)],
+        #         axis=2
+        #     ),
+        #     elems=[z_sampled_geometry, z_sampled_color],
+        #     fn_output_signature=tf.TensorSpec([28, 28, self._z_dim])
+        # )
+        # return z_sampled
 
     def visualize_z(self, z):
         """Visualizes a Z value as a grayscale image"""
@@ -159,15 +231,35 @@ class AaeModel(tf.keras.Model):
                 regularization_losses=self.losses
             )
 
+            ### Segmentation regularization - the last n-1 masks add up to input ###
+
+            segmentation_loss = self.compiled_loss(
+                y_true=images,
+                y_pred=tf.expand_dims(
+                    # sum all masks except for the first one, otherwise we would
+                    # always get ones (due to the softmax normalization)
+                    tf.reduce_sum(z_encoded[:,:,:,1:], axis=3),
+                    axis=3
+                ),
+                regularization_losses=self.losses
+            )
+
+            nonempty_loss = -tf.reduce_mean(z_encoded[:,:,:,1:])
+
             ### Aggregate loss functions by models ###
 
             # Generator loss is reduced, because it was too high and caused the
             # latent space to get compressed into a point or a line during the
             # first epoch. This multiplier keeps it spread out but still
             # within the -1, 1 range.
-            generator_multiplier = 0.01 * 0.1 * 0.1 # e-4 works well
+            generator_multiplier = 0.01
+            segmentation_multiplier = 1.0
+            nonempty_multiplier = 1.0
 
-            encoder_loss = reconstruction_loss + generator_loss * generator_multiplier
+            encoder_loss = reconstruction_loss + \
+                generator_loss * generator_multiplier + \
+                segmentation_loss * segmentation_multiplier + \
+                nonempty_loss * nonempty_multiplier
             decoder_loss = reconstruction_loss
             discriminator_loss = discriminator_loss
 
@@ -194,9 +286,11 @@ class AaeModel(tf.keras.Model):
         )
 
         return {
-            "reconstruction_loss": reconstruction_loss,
-            "discriminator_loss": discriminator_loss,
-            "generator_loss": generator_loss
+            "nem": nonempty_loss,
+            "segm": segmentation_loss,
+            "rec": reconstruction_loss,
+            "disc": discriminator_loss,
+            "gen": generator_loss
         }
 
     # def generate(self, epoch, logs):

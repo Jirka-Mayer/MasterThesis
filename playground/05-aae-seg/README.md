@@ -1,3 +1,0 @@
-# Adversarial autoencoder segmentation
-
-TODO

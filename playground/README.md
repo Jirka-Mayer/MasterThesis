@@ -1,0 +1,10 @@
+This playground folder documents the experimentation, learning and prototyping process that lead up to the thesis.
+
+- [`01-supervised-mnist`](01-supervised-mnist): I implemented a simple, supervised MNIST classifier to get used to Tensorflow 2.
+- [`02-vae-mnist`](02-vae-mnist): Variational autoencoder trained on MNIST dataset. The goal was to understand the architecture fully and explore the latent space.
+- [`03-aae-mnist`](03-aae-mnist): Adversarial autoencoder trained on MNIST dataset. The goal was to understand the architecture and explore the latent space. Also to compare the latent space to the variational autoencoder. The training is unsupervised and the latent vector is continuous.
+- [`04-unet-seg`](04-unet-seg): Failed attempts to use UNets to perform unsupervised segmentation. The repository contains the code to define a UNet model. The takeaway is that segmentation cannot be performed without supervision in the autoencoder style, because the model lacks bottleneck and good enough objective to shape the segmentation masks into anything useful.
+- [`05-aae-seg`](05-aae-seg): Attempt to combine adversarial autoencoder with UNet to turn the latent vector of the AAE to a latent segmentation mask of a UNet AAE. Didn't work. The model lacks a bottleneck.
+- [`06-aae-semisup-seg`](06-aae-semisup-seg): Adversarial autoencoder that outputs segmentation masks and can be trained either fully supervised or partially unsupervised (by ignoring the segmentation output during training). It acts as both an autoencoder and a classifier simultaneously. The segmentation still doesn't have a loss that shapes it during unsupervised training though. This is a model that can be explored in the thesis.
+- [`07-aae-discrete`](07-aae-discrete): Adversarial autoencoder with a categorical latent vector, trained in the unsupervised regime (I just reproduced the AAE paper).
+- [`08-segmentation-dataset`](08-segmentation-dataset): Folder where I prepared a MUSCIMA++ derived segmentation dataset.

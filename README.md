@@ -21,3 +21,6 @@ https://github.com/xiaomengyc/Few-Shot-Semantic-Segmentation-Papers
 
 Stacked Convolutional Sparse Auto-Encoders for Representation Learning
 https://dl.acm.org/doi/abs/10.1145/3434767
+
+Sparse autoencoder: Lecture notes (Andrew Ng)
+https://web.stanford.edu/class/cs294a/sparseAutoencoder.pdf

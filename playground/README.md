@@ -7,4 +7,4 @@ This playground folder documents the experimentation, learning and prototyping p
 - [`05-aae-seg`](05-aae-seg): Attempt to combine adversarial autoencoder with UNet to turn the latent vector of the AAE to a latent segmentation mask of a UNet AAE. Didn't work. The model lacks a bottleneck.
 - [`06-aae-semisup-seg`](06-aae-semisup-seg): Adversarial autoencoder that outputs segmentation masks and can be trained either fully supervised or partially unsupervised (by ignoring the segmentation output during training). It acts as both an autoencoder and a classifier simultaneously. The segmentation still doesn't have a loss that shapes it during unsupervised training though. This is a model that can be explored in the thesis.
 - [`07-aae-discrete`](07-aae-discrete): Adversarial autoencoder with a categorical latent vector, trained in the unsupervised regime (I just reproduced the AAE paper).
-- [`08-segmentation-dataset`](08-segmentation-dataset): Folder where I prepared a MUSCIMA++ derived segmentation dataset.
+- [`08-aae-muscima`](08-aae-muscima): Folder where I prepared a MUSCIMA++ derived segmentation dataset and trained an AAE autoencoder.

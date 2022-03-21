@@ -1,13 +1,8 @@
 import os
-import pathlib
-import re
-import numpy as np
-import cv2
-import random
-from typing import List, Tuple, Dict
-import matplotlib.pyplot as plt
-import mung
-import mung.io
+
+####################################
+# Dataset constants and parameters #
+####################################
 
 
 DATASETS_PATH = os.path.expanduser("~/Datasets")
@@ -49,6 +44,10 @@ CVCMUSCIMA_IDEAL = os.path.join(
 )
 
 
+########################
+# Dataset loading code #
+########################
+
 def load_independent_dataset(train_split=True):
     import tensorflow as tf
 
@@ -68,7 +67,7 @@ def load_independent_dataset(train_split=True):
 
         data = {}
         for c in classnames:
-            image_filepath = tf.strings.join([dataset_path, "image", filename], os.sep)
+            image_filepath = tf.strings.join([dataset_path, c, filename], os.sep)
             image = tf.io.decode_png(tf.io.read_file(image_filepath))
             normalized = tf.cast(image, dtype=tf.float32) / 255.0
             data[c] = normalized
@@ -77,7 +76,31 @@ def load_independent_dataset(train_split=True):
 
     return tf.data.Dataset.list_files(
         os.path.join(dataset_path, "image", "*")
-    ).map(path_to_data)
+    ).map(path_to_data, num_parallel_calls=tf.data.AUTOTUNE)
+
+
+###########################
+# Dataset generation code #
+###########################
+
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
+
+import pathlib
+import re
+import numpy as np
+import random
+from typing import List, Tuple, Dict
+
+if not is_docker(): # do not load in the tensorflow container
+    import cv2
+    import matplotlib.pyplot as plt
+    import mung
+    import mung.io
 
 
 def build_the_dataset():
@@ -222,7 +245,7 @@ def __save_tile(tile_masks, coords, writer, page, dataset_name):
         )
 
 
-def __print_mask_into_image(image, node: mung.io.Node):
+def __print_mask_into_image(image, node):
     # faster implementation (fuzzy "OR")
     yf = node.top
     yt = yf + node.height

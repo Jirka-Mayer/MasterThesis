@@ -18,3 +18,6 @@ https://arxiv.org/pdf/2006.05278.pdf
 
 Few-Shot semantic segmentation papers
 https://github.com/xiaomengyc/Few-Shot-Semantic-Segmentation-Papers
+
+Stacked Convolutional Sparse Auto-Encoders for Representation Learning
+https://dl.acm.org/doi/abs/10.1145/3434767

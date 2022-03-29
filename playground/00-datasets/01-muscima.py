@@ -291,7 +291,7 @@ def muscimapp_images_with_masks(
     return tf.data.Dataset.zip(structure)
 
 
-def _tile_count_dataset(
+def tile_count_dataset(
     page_list: MuscimaPageList,
     tile_size_wh: Tuple[int, int]
 ) -> tf.data.Dataset:
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     ds = muscimapp_images_with_masks(page_list, masks)
     ds = sample_tiles_from(
         ds,
-        _tile_count_dataset(page_list, tile_size_wh),
+        tile_count_dataset(page_list, tile_size_wh),
         tile_size_wh,
         rnd,
         nonempty_classnames

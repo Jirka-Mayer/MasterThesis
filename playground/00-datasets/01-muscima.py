@@ -1,10 +1,22 @@
 import os
-from platform import node
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2") # Report only TF errors by default
+# os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2") # Report only TF errors by default
+
+from typing import Tuple, List, TypeVar, Sequence, Dict
+import pathlib
+import re
+import random
+import magic
+
+import mung
+import mung.io
+import numpy as np
+import tensorflow as tf
+
 
 ####################################
 # Dataset constants and parameters #
 ####################################
+
 
 DATASETS_PATH = os.path.expanduser("~/Datasets")
 
@@ -20,18 +32,6 @@ CVCMUSCIMA_IDEAL = os.path.join(
     DATASETS_PATH,
     "CvcMuscima_StaffRemoval/CvcMuscima-Distortions/ideal"
 )
-
-############################
-
-from typing import Tuple, List, TypeVar, Sequence, Dict
-import pathlib
-import re
-import random
-
-import mung
-import mung.io
-import numpy as np
-import tensorflow as tf
 
 
 ####################
@@ -96,12 +96,18 @@ class MuscimaPage:
         """Loads the MUSCIMA++ nodes list for the page"""
         return mung.io.read_nodes_from_file(self.nodes_file_path())
 
-    def load_ideal_image_as_numpy(self) -> np.array:
+    def load_ideal_image_as_numpy(self) -> np.ndarray:
         """Loads the CVC-MUSCIMA ideal image as a numpy array"""
         path = self.ideal_image_path()
         data = tf.io.read_file(path)
         img = tf.io.decode_png(data)
         return img.numpy()
+
+    def dimensions_via_magic(self) -> Tuple[int, int]:
+        """Returns image dimensions gathered via the magic module"""
+        t = magic.from_file(self.ideal_image_path())
+        w, h = re.search('(\d+) x (\d+)', t).groups()
+        return int(w), int(h)
 
 
 class MuscimaPageList:
@@ -171,7 +177,7 @@ class MuscimaPageList:
 ####################
 
 
-def _construct_muscima_page_mask(page: MuscimaPage, node_classes: List[str]) -> np.array:
+def _construct_muscima_page_mask(page: MuscimaPage, node_classes: List[str]) -> np.ndarray:
     image = page.load_ideal_image_as_numpy()
     nodes = page.load_nodes()
 
@@ -182,12 +188,41 @@ def _construct_muscima_page_mask(page: MuscimaPage, node_classes: List[str]) -> 
     return mask
 
 
-def __print_mask_into_image(image: np.array, node: mung.io.Node):
+def __print_mask_into_image(image: np.ndarray, node: mung.io.Node):
     yf = node.top
     yt = yf + node.height
     xf = node.left
     xt = xf + node.width
     image[yf:yt, xf:xt] = 1 - (1 - node.mask) * (1 - image[yf:yt, xf:xt]) # fuzzy OR
+
+
+def _sample_tile_from_image(
+    images: Dict[str, np.ndarray],
+    tile_size_wh: Tuple[int, int],
+    rnd: random.Random,
+    nonempty_classnames: List[str]
+) -> Dict[str, np.ndarray]:
+    w, h = tile_size_wh
+    for attempt in range(5): # resampling attempts
+        xf = rnd.randint(0, images["image"].shape[1] - w - 1)
+        xt = xf + w
+        yf = rnd.randint(0, images["image"].shape[0] - h - 1)
+        yt = yf + h
+
+        mask_tiles = {
+            k: images[k][yf:yt, xf:xt, :]
+            for k in images.keys()
+        }
+
+        retry = False
+        for mask_name in nonempty_classnames:
+            if np.all(mask_tiles[mask_name] < 0.1):
+                retry = True
+
+        if not retry:
+            break
+    
+    return mask_tiles
 
 
 ############################
@@ -226,6 +261,7 @@ def muscimapp_masks(
     def _load_mask(p_tuple: tf.Tensor):
         p = MuscimaPage(*p_tuple.numpy())
         mask = _construct_muscima_page_mask(p, node_classes)
+        mask = mask[:, :, np.newaxis] # add channel dimension
         return tf.constant(mask, dtype=tf.float32)
     
     ds = tf.data.Dataset.from_tensor_slices(
@@ -255,98 +291,138 @@ def muscimapp_images_with_masks(
     return tf.data.Dataset.zip(structure)
 
 
-# TODO: sample tiles from the dataset
+def _tile_count_dataset(
+    page_list: MuscimaPageList,
+    tile_size_wh: Tuple[int, int]
+) -> tf.data.Dataset:
+    """Creates a dataset of int32 with number of tiles for each page"""
+    w, h = tile_size_wh
+    tile_pixels = w * h
+
+    def _dim_to_tiles(w, h):
+        return w * h // tile_pixels
+
+    data = [_dim_to_tiles(*p.dimensions_via_magic()) for p in page_list]
+    return tf.data.Dataset.from_tensor_slices(data)
+
+
+def sample_tiles_from(
+    images_ds: tf.data.Dataset,
+    tile_count_ds: tf.data.Dataset,
+    tile_size_wh: Tuple[int, int],
+    rnd: random.Random,
+    nonempty_classnames: List[str]
+) -> tf.data.Dataset:
+    assert type(images_ds.element_spec) is dict
+    images_keys = list(sorted(images_ds.element_spec.keys()))
+    tiles_count = tile_count_ds \
+        .reduce(np.int32(0), lambda state, item: state + item) \
+        .numpy()
+
+    def _generate_tiles():
+        for image_tensor, tile_count in zip(images_ds, tile_count_ds):
+            images = {
+                k: image_tensor[k].numpy()
+                for k in images_keys
+            }
+            for _ in range(tile_count.numpy()):
+                tile = _sample_tile_from_image(
+                    images, tile_size_wh, rnd, nonempty_classnames
+                )
+                tile_tensor = {
+                    k: tf.constant(tile[k], dtype=tf.float32)
+                    for k in images_keys
+                }
+                yield tile_tensor
+    
+    ds = tf.data.Dataset.from_generator(
+        _generate_tiles,
+        output_signature={
+            k: tf.TensorSpec(shape=[None, None, None], dtype=tf.float32)
+            for k in images_keys
+        }
+    )
+    ds = ds.repeat().take(tiles_count) # trick to set dataset length
+    return ds
+
+
+def resize_images(
+    input_ds: tf.data.Dataset,
+    scale_factor: float,
+    method: tf.image.ResizeMethod
+) -> tf.data.Dataset:
+    """Resizes images of given dataset (assumes dict to be a data item)"""
+    def _resize_img(item):
+        return {
+            k: tf.image.resize(
+                images=item[k][tf.newaxis, :, :, :],
+                size=tf.cast(
+                    tf.cast(tf.shape(item[k])[0:2], tf.float32) * scale_factor,
+                    tf.int32
+                ),
+                method=method
+            )[0, :, :, :]
+            for k in item.keys()
+        }
+    
+    return input_ds.map(_resize_img, num_parallel_calls=tf.data.AUTOTUNE)
+
+
+#########################
+# Main (debugging code) #
+#########################
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import tqdm
     
     page_list = MuscimaPageList.get_independent_train_set()
-    ds = muscimapp_images_with_masks(page_list, {
+    masks = {
         "noteheads": [
             "noteheadFull", "noteheadHalf", "noteheadWhole",
             "noteheadFullSmall", "noteheadHalfSmall"
         ]
-    })
-    for i, img in enumerate(ds):
-        # print(img)
-        # plt.imshow(img)
-        # plt.show()
-        print(img["image"].shape)
+    }
+    nonempty_classnames = ["noteheads"]
+    rnd = random.Random(42)
+    tile_size_wh = (512, 256)
 
-    exit()
-
-############################
-
-import PIL.Image
-from typing import Tuple, List
-import re
-import magic
-
-def _parse_filename(filename: str) -> Tuple[int, int]:
-    """Turns "CVC-MUSCIMA_W-13_N-02_D-ideal.xml" into (13, 2)"""
-    m = re.match("^CVC-MUSCIMA_W-(\\d+)_N-(\\d+)_D-ideal\\.xml$", filename)
-    return int(m.group(1)), int(m.group(2))
-
-def foo(item):
-    writer, page = _parse_filename(item)
-    filepath = os.path.join(
-        CVCMUSCIMA_IDEAL,
-        "w-{:02d}/image/p{:03d}.png".format(writer, page)
+    ds = muscimapp_images_with_masks(page_list, masks)
+    ds = sample_tiles_from(
+        ds,
+        _tile_count_dataset(page_list, tile_size_wh),
+        tile_size_wh,
+        rnd,
+        nonempty_classnames
     )
-    im = PIL.Image.open(filepath)
-    w, h = im.size
-    return item, im.size, magic.from_file(filepath)
+    ds = resize_images(ds, 0.25, tf.image.ResizeMethod.AREA)
 
-print("START")
-all_files = set([
-    foo(x) for x in
-    os.listdir(MUSCIMAPP_ANNOTATIONS) if x.endswith(".xml")
-])
-print("DONE")
+    # Debugging loop code:
+    # for img in ds.take(5):
+    #     # print(img["image"])
+    #     plt.imshow(img["image"])
+    #     plt.show()
+    #     # print(img["image"].shape)
+    # exit()
 
-print(all_files)
-
-exit()
-
-###############################
-
-import tensorflow as tf
-
-# ds = tf.data.Dataset.range(1, 4)
-
-def mygen():
-    print("GENERATOR CALLED")
-    for i in range(1, 4):
-        yield i
-
-slow_ds = tf.data.Dataset.from_generator(
-    mygen,
-    output_signature=tf.TensorSpec(shape=(), dtype=tf.int32)
-)
-
-# ds = tf.data.Dataset.from_tensor_slices(list(slow_ds))
-os.makedirs(
-    os.path.expanduser("~/Datasets/Cache"),
-    exist_ok=True
-)
-# ds = ds.cache(filename=os.path.expanduser("~/Datasets/Cache/01-muscima"))
-# ds = slow_ds.snapshot(os.path.expanduser("~/Datasets/Cache/01-muscima"))
-
-ds = slow_ds
-ds = ds.scan(0, lambda s, i: (s + 1, i + 1))
-
-# ds = tf.data.Dataset.from_tensor_slices([1, 2, 3, 4])
-
-# def mymap(item):
-#     return tf.data.Dataset.from_tensor_slices(
-#         tf.repeat([item], 5)
-#     )
-
-# ds = ds.flat_map(mymap)
-
-for i in ds:
-    print(i.numpy())
-print("========")
-
-print(ds.cardinality().numpy())
+    # Dummy computation to time dataset iteration:
+    # 40s without anything (all times are without image resizing)
+    # 1:40 building cache
+    # 26s pulling from cache
+    # 1:10 building snapshot
+    # 16s with snapshot
+    # 4s with snapshot if the file gets cached by the OS in RAM on subsequent runs
+    # SNAPSHOT:
+    ds = ds.snapshot(
+        path=os.path.expanduser("~/Datasets/Cache/01-muscima-debug"),
+        compression=None # important for performance
+    )
+    # CACHE:
+    # ds = ds.cache(os.path.expanduser("~/Datasets/Cache/01-muscima-debug"))
+    for _ in range(5): # multiple runs
+        total_pixels = 0
+        for img in tqdm.tqdm(ds, total=len(ds)):
+            w, h, _ = img["image"].shape
+            total_pixels += w * h
+        print("Total pixels:", total_pixels)

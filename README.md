@@ -27,3 +27,9 @@ https://web.stanford.edu/class/cs294a/sparseAutoencoder.pdf
 
 Awesome list:
 https://github.com/yassouali/awesome-semi-supervised-learning
+
+Understanding the Effective Receptive Field in Deep Convolutional Neural Networks
+https://arxiv.org/pdf/1701.04128.pdf
+
+Dynamic Routing Between Capsules
+https://cmp.felk.cvut.cz/~toliageo/rg/papers/SabourFrosstHinton_NIPS2017_Dynamic%20Routing%20Between%20Capsules.pdf

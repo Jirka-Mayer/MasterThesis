@@ -369,18 +369,36 @@ def resize_images(
 
 
 def _create_noisy_image(image: np.ndarray, rnd: random.Random) -> np.ndarray:
+    image = image[:, :, 0] # drop channel dim
+    
     noisy_image = image.copy()
 
     nprnd = np.random.RandomState(seed=rnd.randint(0, 1000000))
 
-    # add random noise mask
-    noise = nprnd.rand(*image.shape) * 2.0 - 1.0
-    noisy_image += noise
+    noise_dim = 64
+    noise = nprnd.rand(noise_dim, noise_dim)
+
+    offset_x = 0
+    offset_y = 0
+
+    # some GPU shader-like code
+    sz = 32
+    x, y = np.indices(image.shape)
+    uv_x = ((x + offset_x) // sz) % noise_dim
+    uv_y = ((y + offset_y) // sz) % noise_dim
+
+    noise_over_image = noise[uv_x, uv_y]
+
+    noisy_image[noise_over_image > 0.75] = 0.0
+
+    # add random mask mask
+    # noise = nprnd.rand(*image.shape) * 2.0 - 1.0
+    #noisy_image[mask] = 0.0
 
     # randomly holdout rectangles
 
 
-    return noisy_image
+    return noisy_image[:, :, np.newaxis] # reintroduce channel dim
 
 
 def add_noisy_images(input_ds: tf.data.Dataset, rnd: random.Random) -> tf.data.Dataset:

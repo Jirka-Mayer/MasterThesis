@@ -368,6 +368,46 @@ def resize_images(
     return input_ds.map(_resize_img, num_parallel_calls=tf.data.AUTOTUNE)
 
 
+def _create_noisy_image(image: np.ndarray, rnd: random.Random) -> np.ndarray:
+    noisy_image = image.copy()
+
+    nprnd = np.random.RandomState(seed=rnd.randint(0, 1000000))
+
+    # add random noise mask
+    noise = nprnd.rand(*image.shape) * 2.0 - 1.0
+    noisy_image += noise
+
+    # randomly holdout rectangles
+
+
+    return noisy_image
+
+
+def add_noisy_images(input_ds: tf.data.Dataset, rnd: random.Random) -> tf.data.Dataset:
+    assert type(input_ds.element_spec) is dict
+    images_keys = list(sorted(input_ds.element_spec.keys()))
+    dataset_length = len(input_ds)
+
+    def _generate_items():
+        for item in input_ds:
+            image = item["image"].numpy()
+            noisy_image = _create_noisy_image(image, rnd)
+
+            item_out = {k: item[k] for k in item.keys()}
+            item_out["image_noisy"] = tf.constant(noisy_image, dtype=tf.float32)
+            yield item_out
+    
+    ds = tf.data.Dataset.from_generator(
+        _generate_items,
+        output_signature={
+            k: tf.TensorSpec(shape=[None, None, None], dtype=tf.float32)
+            for k in images_keys + ["image_noisy"]
+        }
+    )
+    ds = ds.repeat().take(dataset_length) # trick to set dataset length
+    return ds
+
+
 #########################
 # Main (debugging code) #
 #########################
@@ -396,15 +436,16 @@ if __name__ == "__main__":
         rnd,
         nonempty_classnames
     )
+    ds = add_noisy_images(ds, rnd)
     ds = resize_images(ds, 0.25, tf.image.ResizeMethod.AREA)
 
     # Debugging loop code:
-    # for img in ds.take(5):
-    #     # print(img["image"])
-    #     plt.imshow(img["image"])
-    #     plt.show()
-    #     # print(img["image"].shape)
-    # exit()
+    for img in ds.take(5):
+        # print(img["image"])
+        plt.imshow(img["image_noisy"])
+        plt.show()
+        # print(img["image"].shape)
+    exit()
 
     # Dummy computation to time dataset iteration:
     # 40s without anything (all times are without image resizing)

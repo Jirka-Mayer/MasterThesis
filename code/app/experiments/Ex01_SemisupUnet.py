@@ -1,10 +1,22 @@
 import argparse
-import os
 import tensorflow as tf
+
+from ..datasets.NoiseGenerator import NoiseGenerator
 from .Experiment import Experiment
 from ..models.DenoisingUnetModel import DenoisingUnetModel
-from ..datasets.legacy_muscima import prepare_datasets
-from ..datasets.convert_to_semisup_dataset import convert_to_semisup_dataset
+from ..datasets.DatasetFeeder import DatasetFeeder
+from ..datasets.muscima.Muscima import Muscima
+from ..datasets.muscima.SegmentationDescription import SegmentationDescription
+
+
+class Options:
+    def __init__(self, **kwargs):
+        self.seed: int = kwargs["seed"]
+        self.epochs: int = kwargs["epochs"]
+        self.batch_size: int = kwargs["batch_size"]
+        self.validation_ratio: float = kwargs["validation_ratio"]
+        self.labeled_ratio: float = kwargs["labeled_ratio"]
+        self.unlabeled_ratio: float = kwargs["unlabeled_ratio"]
 
 
 class Ex01_SemisupUnet(Experiment):
@@ -24,82 +36,52 @@ class Ex01_SemisupUnet(Experiment):
         parser.add_argument("-n", "--number")
 
     def run(self, args: argparse.Namespace):
-        self.compute_single_instance(
+        opts = Options(
             seed=42,
             epochs=10,
             batch_size=2,
+            validation_ratio=0.1,
             labeled_ratio=0.1,
             unlabeled_ratio=0.1
         )
+        self.compute_single_instance(opts)
 
-    def compute_single_instance(
-        self,
-        seed: int,
-        epochs: int,
-        batch_size: int,
-        labeled_ratio: float,
-        unlabeled_ratio: float
-    ) -> float:
-        tf.random.set_seed(seed)
+    def compute_single_instance(self, opts: Options) -> float:
+        tf.random.set_seed(opts.seed)
 
-        ds_train, ds_validate, ds_test = prepare_datasets(
-            seed=seed,
-            validation_split=0.1,
-            scale_factor=0.25 # TODO: testing out on smaller data
+        model_directory = self.experiment_directory(
+            self.build_model_name(opts)
         )
 
-        CACHE_PATH = os.path.expanduser("~/Datasets/Cache/my_model")
+        noise = NoiseGenerator(opts.seed)
 
-        # TODO: figure out some smart dataset caching syntax
-        # TODO: figure out short dataset API
+        with DatasetFeeder(self.experiment_directory("cache")) as feeder:
+            ds_train, ds_validate, ds_test = \
+                Muscima.semisupervised_experiment_datasets(
+                    seed=opts.seed,
+                    validation_ratio=opts.validation_ratio,
+                    labeled_ratio=opts.labeled_ratio,
+                    unlabeled_ratio=opts.unlabeled_ratio,
+                    batch_size=opts.batch_size,
+                    segdesc=SegmentationDescription.NOTEHEADS,
+                    tile_size_wh=(512, 256),
+                    unsupervised_transformation=noise.dataset_transformation,
+                    output_scale_factor=0.25, # TODO: debug
+                )
 
-        # e.g. datasets.bust_cache()
-        
-        
-        
-        
-        # test_pages = MuscimaPageList.get_independent_test_set()
-        # Muscima.ds_
-        
-        
-        
-        
-        
-        #######################
+            ds_train = feeder(ds_train)
+            ds_validate = feeder(ds_validate)
+            ds_test = feeder(ds_test)
 
-        # slice_labeled, slice_unlabeled, slice_validation, slice_test = Muscima.get_dataset_slices(
-        #     validation_ratio=0.1,
-        #     labeled_ratio=labeled_ratio,
-        #     unlabeled_ratio=unlabeled_ratio
-        # )
+            ds_train = ds_train.take(200) # TODO: debug
 
-        # Muscima.denoising_semisup_segmentation_datasets(
-        #     tile_size=?,
-        #     batch_size=?,
-        #     segmentation_classes=SegmentationClasses.NOTEHEADS
-        # )
+            model = DenoisingUnetModel.load_or_create(model_directory)
+            model.perform_training(opts.epochs, ds_train, ds_validate)
+            model.perform_evaluation(ds_test)
 
-        ds_train = ds_train \
-            .batch(batch_size) \
-            .snapshot(path=os.path.join(CACHE_PATH, "train"), compression=None) \
-            .prefetch(tf.data.AUTOTUNE)
-
-        ds_train = ds_train.take(200)
-        
-        ds_train = convert_to_semisup_dataset(ds_train)
-
-        ds_validate = ds_validate \
-            .batch(batch_size) \
-            .snapshot(path=os.path.join(CACHE_PATH, "validate"), compression=None) \
-            .prefetch(tf.data.AUTOTUNE)
-
-        ds_test = ds_test \
-            .batch(batch_size) \
-            .snapshot(path=os.path.join(CACHE_PATH, "test"), compression=None) \
-            .prefetch(tf.data.AUTOTUNE)
-
-        model_directory = "my_model"
-
-        model = DenoisingUnetModel.load_or_create(model_directory)
-        model.perform_training(epochs, ds_train, ds_validate)
-        model.perform_evaluation(ds_test)
+    def build_model_name(self, opts: Options) -> str:
+        # outputs: "experiment-name__foo=42_bar=baz"
+        take_vars = ["seed", "validation_ratio", "labeled_ratio", "unlabeled_ratio"]
+        opt_vars = vars(opts)
+        vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]
+        return "{}__{}".format(self.name, "_".join(vars_list))

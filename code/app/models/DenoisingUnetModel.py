@@ -34,6 +34,16 @@ def _unet_level(depth, max_depth, inner_features, x):
     x = _unet_level(depth + 1, max_depth, inner_features, x)
     x = _upsample(output_features=level_features, x=x)
     
+    # (sz // 2) * 2 is not equal to "sz" if "sz" is not even
+    # this fixes that:
+    x = tf.image.pad_to_bounding_box(
+        x,
+        offset_height=0,
+        offset_width=0,
+        target_height=tf.shape(skip_connection)[1],
+        target_width=tf.shape(skip_connection)[2]
+    )
+    
     x = tf.concat((skip_connection, x), axis=3)
     
     x = tf.keras.layers.Conv2D(
@@ -101,6 +111,11 @@ class DenoisingUnetModel(tf.keras.Model):
 
     @tf.function
     def call(self, inputs, training=None):
+        return self.unet(inputs, training=training)
+
+    @tf.function
+    def call_denoising(self, inputs, training=None):
+        # TODO: perform denoising
         return self.unet(inputs, training=training)
 
     @tf.function
@@ -173,7 +188,7 @@ class DenoisingUnetModel(tf.keras.Model):
         self.model_directory.assert_folder_structure()
 
         VISUALIZE_COUNT = 8
-        visualization_batch = ds_validate \
+        visualization_batch = ds_train \
             .unbatch() \
             .batch(VISUALIZE_COUNT) \
             .take(1) \
@@ -213,8 +228,25 @@ class DenoisingUnetModel(tf.keras.Model):
         )
 
     def visualize(self, epoch, batch):
-        images, expected_masks = batch
-        predicted_masks = self.call(images, training=False)
+        (sup_x, unsup_x), (sup_y_true, unsup_y_true) = batch
+        
+        sup_y_pred = self.call(sup_x, training=False)
+        unsup_y_pred = self.call_denoising(unsup_x, training=False)
+
+        self.visualize_xy("sup", epoch, sup_x, sup_y_pred, sup_y_true)
+        self.visualize_xy("unsup", epoch, unsup_x, unsup_y_pred, unsup_y_true)
+
+    def visualize_xy(self, name, epoch, x, y_pred, y_true):
+        border_color = 1.0
+        border_width = 2
+        def _add_border(batch3d):
+            return tf.image.pad_to_bounding_box(
+                image=batch3d - border_color,
+                offset_height=0,
+                offset_width=0,
+                target_height=batch3d.shape[1] + 1,
+                target_width=batch3d.shape[2] + 1,
+            ) + border_color
         
         def _unstack_channels(batch3d):
             return tf.concat(tf.unstack(batch3d, axis=3), axis=2)
@@ -223,19 +255,19 @@ class DenoisingUnetModel(tf.keras.Model):
             return tf.concat(tf.unstack(batch2d, axis=0), axis=0)
 
         def _unstack_both(batch3d):
-            return _unstack_instances(_unstack_channels(batch3d))
+            return _unstack_instances(_unstack_channels(_add_border(batch3d)))
 
-        head = _unstack_both(images)
-        body = _unstack_both(expected_masks)
-        tail = _unstack_both(predicted_masks)
-        bar = tf.ones(shape=(head.shape[0], 2), dtype=np.float32)
+        head = _unstack_both(x)
+        body = _unstack_both(y_pred)
+        tail = _unstack_both(y_true)
+        bar = tf.ones(shape=(head.shape[0], border_width), dtype=np.float32)
 
         img = tf.concat([head, bar, body, bar, tail], axis=1)
 
         tf.keras.utils.save_img(
             os.path.join(
                 self.model_directory.visualizations_path,
-                "visualization-{:04d}.png".format(epoch)
+                "{}-{:04d}.png".format(name, epoch)
             ),
             tf.stack([img, img, img], axis=2) * 255,
             scale=False

@@ -1,6 +1,7 @@
 from typing import Tuple, Sequence, TypeVar
 import pathlib
 import random
+import tensorflow as tf
 
 from .MuscimaPage import MuscimaPage
 from ..constants import *
@@ -66,3 +67,37 @@ class MuscimaPageList:
         second_writers = writers[split_index:]
 
         return self.filter_writers(first_writers), self.filter_writers(second_writers)
+
+    def split_validation_semisup(
+        self,
+        validation_ratio: float,
+        labeled_ratio: float,
+        unlabeled_ratio: float,
+        seed: int
+    ):
+        """
+        Splits the dataset into three parts:
+        1) validation dataset, expressed by a ratio to the total dataset
+        2) "labeled" dataset split as a ratio of the remainder
+        3) "unlabeled" dataset in the same ratio unit as the labeled one
+        Labeled and unlabeled ratios can be varied independently and cannot
+        add up to more than 1.0 (the whole non-validation dataset part)
+        """
+        assert labeled_ratio + unlabeled_ratio <= 1.0
+
+        validation_pages, train_pages = self.split(
+            ratio=validation_ratio, seed=seed
+        )
+        used_pages, _ = train_pages.split(
+            ratio=labeled_ratio + unlabeled_ratio, seed=seed
+        )
+        labeled_pages, unlabeled_pages = used_pages.split(
+            ratio=labeled_ratio / (labeled_ratio + unlabeled_ratio), seed=seed
+        )
+
+        return validation_pages, labeled_pages, unlabeled_pages
+
+    def as_tf_dataset(self):
+        return tf.data.Dataset.from_tensor_slices(
+            [tuple(p) for p in self.instances]
+        )

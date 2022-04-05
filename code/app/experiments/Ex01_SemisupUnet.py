@@ -15,8 +15,8 @@ class Options:
         self.epochs: int = kwargs["epochs"]
         self.batch_size: int = kwargs["batch_size"]
         self.validation_ratio: float = kwargs["validation_ratio"]
-        self.labeled_ratio: float = kwargs["labeled_ratio"]
-        self.unlabeled_ratio: float = kwargs["unlabeled_ratio"]
+        self.sup_ratio: float = kwargs["sup_ratio"]
+        self.unsup_ratio: float = kwargs["unsup_ratio"]
 
 
 class Ex01_SemisupUnet(Experiment):
@@ -27,7 +27,7 @@ class Ex01_SemisupUnet(Experiment):
     def desribe(self):
         return """
         Train a denoising semi-supervised unet model on the muscima++ dataset
-        on various labeled-unlabeled training data splits with the goal of
+        on various sup-unsup training data splits with the goal of
         segmenting noteheads and measure the resulting F1 score for the
         muscima++ test set.
         """
@@ -37,12 +37,12 @@ class Ex01_SemisupUnet(Experiment):
 
     def run(self, args: argparse.Namespace):
         opts = Options(
-            seed=42,
-            epochs=10,
+            seed=42 + 0,
+            epochs=5,
             batch_size=2,
             validation_ratio=0.1,
-            labeled_ratio=0.1,
-            unlabeled_ratio=0.1
+            sup_ratio=0.05,
+            unsup_ratio=0.5
         )
         self.compute_single_instance(opts)
 
@@ -60,8 +60,8 @@ class Ex01_SemisupUnet(Experiment):
                 Muscima.semisupervised_experiment_datasets(
                     seed=opts.seed,
                     validation_ratio=opts.validation_ratio,
-                    labeled_ratio=opts.labeled_ratio,
-                    unlabeled_ratio=opts.unlabeled_ratio,
+                    sup_ratio=opts.sup_ratio,
+                    unsup_ratio=opts.unsup_ratio,
                     batch_size=opts.batch_size,
                     segdesc=SegmentationDescription.NOTEHEADS,
                     tile_size_wh=(512, 256),
@@ -73,7 +73,7 @@ class Ex01_SemisupUnet(Experiment):
             ds_validate = feeder(ds_validate)
             ds_test = feeder(ds_test)
 
-            ds_train = ds_train.take(200) # TODO: debug
+            # ds_train = ds_train.take(200) # TODO: debug
 
             model = DenoisingUnetModel.load_or_create(model_directory)
             model.perform_training(opts.epochs, ds_train, ds_validate)
@@ -81,7 +81,7 @@ class Ex01_SemisupUnet(Experiment):
 
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
-        take_vars = ["seed", "validation_ratio", "labeled_ratio", "unlabeled_ratio"]
+        take_vars = ["seed", "validation_ratio", "sup_ratio", "unsup_ratio"]
         opt_vars = vars(opts)
         vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]
         return "{}__{}".format(self.name, "_".join(vars_list))

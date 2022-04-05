@@ -25,8 +25,8 @@ class Muscima:
     def semisupervised_experiment_datasets(
         seed: int,
         validation_ratio: float,
-        labeled_ratio: float,
-        unlabeled_ratio: float,
+        sup_ratio: float,
+        unsup_ratio: float,
         batch_size: int,
         segdesc: SegmentationDescription,
         tile_size_wh: Tuple[int, int],
@@ -37,61 +37,61 @@ class Muscima:
         output_scale_method = tf.image.ResizeMethod.AREA,
     ):
         # split up muscima pages properly
-        validation_pages, labeled_pages, unlabeled_pages = \
+        validation_pages, sup_pages, unsup_pages = \
             MuscimaPageList.get_independent_train_set() \
                 .split_validation_semisup(
                     validation_ratio=validation_ratio,
-                    labeled_ratio=labeled_ratio,
-                    unlabeled_ratio=unlabeled_ratio,
+                    sup_ratio=sup_ratio,
+                    unsup_ratio=unsup_ratio,
                     seed=seed
                 )
         
         test_pages = MuscimaPageList.get_independent_test_set()
-        
+
         # training dataset
-        labeled_pages_ds = labeled_pages.as_tf_dataset()
-        ds_labeled = tf.data.Dataset.zip(datasets=(
-            labeled_pages_ds.apply(transform_pages_to_images()),
-            labeled_pages_ds.apply(transform_pages_to_masks(segdesc))
+        sup_pages_ds = sup_pages.as_tf_dataset()
+        ds_sup = tf.data.Dataset.zip(datasets=(
+            sup_pages_ds.apply(transform_pages_to_images()),
+            sup_pages_ds.apply(transform_pages_to_masks(segdesc))
         ))
-        ds_labeled = ds_labeled.apply(
+        ds_sup = ds_sup.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
         )
-        ds_labeled = ds_labeled.apply(transform_sample_tiles(
+        ds_sup = ds_sup.apply(transform_sample_tiles(
             seed=seed,
             tile_size_wh=tile_size_wh,
-            tile_count_ds=labeled_pages_ds.apply(
+            tile_count_ds=sup_pages_ds.apply(
                 transform_pages_to_tile_counts(tile_size_wh)
             ),
             nonempty_channels=segdesc.nonempty_channels()
         ))
-        ds_labeled = ds_labeled.shuffle(
+        ds_sup = ds_sup.shuffle(
             buffer_size=1000,
             seed=seed,
             reshuffle_each_iteration=False
         )
 
-        unlabeled_pages_ds = unlabeled_pages.as_tf_dataset()
-        ds_unlabeled = unlabeled_pages_ds.apply(transform_pages_to_images())
-        ds_unlabeled = ds_unlabeled.apply(
+        unsup_pages_ds = unsup_pages.as_tf_dataset()
+        ds_unsup = unsup_pages_ds.apply(transform_pages_to_images())
+        ds_unsup = ds_unsup.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
         )
-        ds_unlabeled = ds_unlabeled.apply(unsupervised_transformation)
-        ds_unlabeled = ds_unlabeled.apply(transform_sample_tiles(
+        ds_unsup = ds_unsup.apply(unsupervised_transformation)
+        ds_unsup = ds_unsup.apply(transform_sample_tiles(
             seed=seed,
             tile_size_wh=tile_size_wh,
-            tile_count_ds=labeled_pages_ds.apply(
+            tile_count_ds=unsup_pages_ds.apply(
                 transform_pages_to_tile_counts(tile_size_wh)
             ),
             nonempty_channels=[]
         ))
-        ds_unlabeled = ds_unlabeled.shuffle(
+        ds_unsup = ds_unsup.shuffle(
             buffer_size=1000,
             seed=seed,
             reshuffle_each_iteration=False
         )
 
-        ds_train = create_semisup_dataset(batch_size, ds_labeled, ds_unlabeled)
+        ds_train = create_semisup_dataset(batch_size, ds_sup, ds_unsup)
         
         # validation dataset
         validation_pages_ds = validation_pages.as_tf_dataset()

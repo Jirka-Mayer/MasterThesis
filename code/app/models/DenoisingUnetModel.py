@@ -59,14 +59,24 @@ def _unet_level(depth, max_depth, inner_features, x):
 
 
 class DenoisingUnetModel(tf.keras.Model):
-    def __init__(self):
+    def __init__(
+        self,
+        input_channels: int = 1,
+        segmentation_channels: int = 1,
+        denoised_channels: int = 1,
+        inner_features: int = 8,
+        depth: int = 2
+    ):
         super().__init__()
 
         self.model_directory = ModelDirectory("model")
         self.finished_epochs = 0
 
-        self._segmentation_classes = 1
-        self._inner_features = 8
+        self.input_channels = input_channels
+        self.segmentation_channels = segmentation_channels
+        self.denoised_channels = denoised_channels
+        self.inner_features = inner_features
+        self.depth = depth
 
         ### Define the UNet model ###
 
@@ -74,80 +84,104 @@ class DenoisingUnetModel(tf.keras.Model):
 
         # input image
         unet_input = tf.keras.layers.Input(
-            shape=(None, None, 1),
+            shape=(None, None, self.input_channels),
             name="unet_input"
         )
 
-        # unet
+        # unet body
         x = _unet_level(
             depth=0,
-            max_depth=2,
-            inner_features=self._inner_features,
+            max_depth=self.depth,
+            inner_features=self.inner_features,
             x=unet_input
         )
 
-        # reshape to output classes (sigmoid conv 1x1)
-        unet_output = tf.keras.layers.Conv2D(
-            self._segmentation_classes, kernel_size=1,
+        # produce outputs (sigmoid conv 1x1)
+        unet_segmentation_output = tf.keras.layers.Conv2D(
+            self.segmentation_channels, kernel_size=1,
+            activation="sigmoid", padding="same"
+        )(x)
+        unet_denoised_output = tf.keras.layers.Conv2D(
+            self.denoised_channels, kernel_size=1,
             activation="sigmoid", padding="same"
         )(x)
 
-        self.unet = tf.keras.Model(
+        # define models
+        self.segmentation_unet = tf.keras.Model(
             inputs=unet_input,
-            outputs=unet_output,
+            outputs=unet_segmentation_output,
+            name="unet"
+        )
+        self.denoising_unet = tf.keras.Model(
+            inputs=unet_input,
+            outputs=unet_denoised_output,
             name="unet"
         )
 
     def get_config(self):
         return {
-            "finished_epochs": self.finished_epochs
+            "finished_epochs": self.finished_epochs,
+            "input_channels": self.input_channels,
+            "segmentation_channels": self.segmentation_channels,
+            "denoised_channels": self.denoised_channels,
+            "inner_features": self.inner_features,
+            "depth": self.depth
         }
 
     @classmethod
     def from_config(cls, config):
-        model = DenoisingUnetModel()
+        model = DenoisingUnetModel(
+            input_channels=config["input_channels"],
+            segmentation_channels=config["segmentation_channels"],
+            denoised_channels=config["denoised_channels"],
+            inner_features=config["inner_features"],
+            depth=config["depth"]
+        )
         model.finished_epochs = config["finished_epochs"]
         return model
 
     @tf.function
     def call(self, inputs, training=None):
-        return self.unet(inputs, training=training)
+        return self.segmentation_unet(inputs, training=training)
 
     @tf.function
     def call_denoising(self, inputs, training=None):
-        # TODO: perform denoising
-        return self.unet(inputs, training=training)
+        return self.denoising_unet(inputs, training=training)
 
     @tf.function
     def train_step(self, batch):
         # unpack semi-supervised input
-        (images, _), (expected_masks, _) = batch
+        (sup_x, unsup_x), (sup_y_true, unsup_y_true) = batch
 
-        with tf.GradientTape() as unet_tape:
+        with tf.GradientTape() as tape:
+            sup_y_pred = self.segmentation_unet(sup_x, training=True)
+            unsup_y_pred = self.denoising_unet(unsup_x, training=True)
             
-            ### Forward pass ###
-
-            predicted_masks = self.unet(images, training=True)
-
-            ### Compute losses ###
-            
-            loss = self.compiled_loss(
-                y_true=expected_masks,
-                y_pred=predicted_masks,
+            seg_loss = self.compiled_loss(
+                y_true=sup_y_true,
+                y_pred=sup_y_pred,
+                regularization_losses=self.losses
+            )
+            noise_loss = self.compiled_loss(
+                y_true=unsup_y_true,
+                y_pred=unsup_y_pred,
                 regularization_losses=self.losses
             )
 
-        ### gradients & update step & return ###
+            loss = seg_loss + noise_loss # TODO: magic hyperparameter here
 
-        unet_gradients = unet_tape.gradient(
-            loss, self.unet.trainable_weights
+        ### gradients & update step & return ###
+        
+        gradients = tape.gradient(
+            loss, self.trainable_weights
         )
         self.optimizer.apply_gradients(
-            zip(unet_gradients, self.unet.trainable_weights)
+            zip(gradients, self.trainable_weights)
         )
 
         return {
-            "loss": loss
+            "seg_loss": seg_loss,
+            "noise_loss": noise_loss
         }
 
 
@@ -187,12 +221,7 @@ class DenoisingUnetModel(tf.keras.Model):
     ):
         self.model_directory.assert_folder_structure()
 
-        VISUALIZE_COUNT = 8
-        visualization_batch = ds_train \
-            .unbatch() \
-            .batch(VISUALIZE_COUNT) \
-            .take(1) \
-            .get_single_element()
+        visualization_batch = self._build_visualization_batch(ds_train)
 
         if self.finished_epochs == 0:
             self.visualize(0, visualization_batch)
@@ -227,14 +256,40 @@ class DenoisingUnetModel(tf.keras.Model):
             ]
         )
 
+    def _build_visualization_batch(self, ds_train: tf.data.Dataset):
+        VISUALIZE_COUNT = 8
+
+        visu_sup = ds_train.map(lambda x, y: (x[0], y[0])) \
+            .unbatch() \
+            .batch(VISUALIZE_COUNT) \
+            .take(1)
+
+        visu_unsup = ds_train.map(lambda x, y: (x[1], y[1])) \
+            .unbatch() \
+            .batch(VISUALIZE_COUNT) \
+            .take(1)
+        
+        visu_sup_batch = (None, None)
+        for b in visu_sup.as_numpy_iterator():
+            visu_sup_batch = b
+
+        visu_unsup_batch = (None, None)
+        for b in visu_unsup.as_numpy_iterator():
+            visu_unsup_batch = b
+        
+        return (visu_sup_batch[0], visu_unsup_batch[0]), \
+            (visu_sup_batch[1], visu_unsup_batch[1])
+
     def visualize(self, epoch, batch):
         (sup_x, unsup_x), (sup_y_true, unsup_y_true) = batch
         
-        sup_y_pred = self.call(sup_x, training=False)
-        unsup_y_pred = self.call_denoising(unsup_x, training=False)
+        if sup_x is not None:
+            sup_y_pred = self.call(sup_x, training=False)
+            self.visualize_xy("sup", epoch, sup_x, sup_y_pred, sup_y_true)
 
-        self.visualize_xy("sup", epoch, sup_x, sup_y_pred, sup_y_true)
-        self.visualize_xy("unsup", epoch, unsup_x, unsup_y_pred, unsup_y_true)
+        if unsup_x is not None:
+            unsup_y_pred = self.call_denoising(unsup_x, training=False)
+            self.visualize_xy("unsup", epoch, unsup_x, unsup_y_pred, unsup_y_true)
 
     def visualize_xy(self, name, epoch, x, y_pred, y_true):
         border_color = 1.0

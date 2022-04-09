@@ -243,11 +243,11 @@ class DenoisingUnetModel(tf.keras.Model):
                         e + 1, visualization_batch
                     )
                 ),
-                tf.keras.callbacks.ModelCheckpoint(
-                    filepath=self.model_directory.checkpoint_format_path,
-                    monitor="val_loss",
-                    verbose=1
-                ),
+                # tf.keras.callbacks.ModelCheckpoint(
+                #     filepath=self.model_directory.checkpoint_format_path,
+                #     monitor="val_loss",
+                #     verbose=1
+                # ),
                 tf.keras.callbacks.CSVLogger(
                     self.model_directory.metrics_csv_path,
                     separator=',',

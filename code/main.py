@@ -12,7 +12,7 @@ subparsers = parser.add_subparsers(
 
 for e in EXPERIMENT_LIST:
     subparser = subparsers.add_parser(e.name)
-    subparser.description = e.desribe()
+    subparser.description = e.describe()
     e.define_arguments(subparser)
 
 args = parser.parse_args()

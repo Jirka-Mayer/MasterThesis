@@ -24,7 +24,7 @@ class Ex01_SemisupUnet(Experiment):
     def name(self):
         return "01-semisup-unet"
 
-    def desribe(self):
+    def describe(self):
         return """
         Train a denoising semi-supervised unet model on the muscima++ dataset
         on various sup-unsup training data splits with the goal of
@@ -36,15 +36,47 @@ class Ex01_SemisupUnet(Experiment):
         parser.add_argument("-n", "--number")
 
     def run(self, args: argparse.Namespace):
-        opts = Options(
-            seed=42 + 0,
-            epochs=5,
-            batch_size=2,
-            validation_ratio=0.1,
+        """
+            Possible values to search through:
+            seed=[0, 1, 2, 3, 4]
             sup_ratio=0.05,
-            unsup_ratio=0.5
-        )
-        self.compute_single_instance(opts)
+            unsup_ratio=[0.0, 0.05, 0.1, 0.3, 0.5],
+            batch_size=[2, 4, 8, 16, 32]
+        """
+
+        # C (different ratios)
+        for unsup_ratio in [0.0, 0.05, 0.1, 0.3, 0.5]:
+            opts = Options(
+                seed=0,
+                epochs=75,
+                batch_size=16,
+                validation_ratio=0.1,
+                sup_ratio=0.05,
+                unsup_ratio=unsup_ratio
+            )
+            self.compute_single_instance(opts)
+        
+        # # A (small batches)
+        # opts = Options(
+        #     seed=42,
+        #     epochs=10,
+        #     batch_size=2,
+        #     validation_ratio=0.1,
+        #     sup_ratio=0.05,
+        #     unsup_ratio=0.5
+        # )
+        # self.compute_single_instance(opts)
+
+        # # B (large batches)
+        # opts = Options(
+        #     seed=42,
+        #     epochs=50,
+        #     batch_size=10,
+        #     validation_ratio=0.1,
+        #     sup_ratio=0.05,
+        #     unsup_ratio=0.5
+        # )
+        # self.compute_single_instance(opts)
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)
@@ -73,15 +105,13 @@ class Ex01_SemisupUnet(Experiment):
             ds_validate = feeder(ds_validate)
             ds_test = feeder(ds_test)
 
-            # ds_train = ds_train.take(200) # TODO: debug
-
             model = DenoisingUnetModel.load_or_create(model_directory)
             model.perform_training(opts.epochs, ds_train, ds_validate)
             model.perform_evaluation(ds_test)
 
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
-        take_vars = ["seed", "validation_ratio", "sup_ratio", "unsup_ratio"]
+        take_vars = ["sup_ratio", "unsup_ratio", "seed", "batch_size"]
         opt_vars = vars(opts)
         vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]
         return "{}__{}".format(self.name, "_".join(vars_list))

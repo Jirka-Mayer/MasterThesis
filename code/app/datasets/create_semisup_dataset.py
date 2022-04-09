@@ -71,7 +71,7 @@ def create_semisup_dataset(
             while iter_labeled.has_more:
                 yield iter_labeled.read_item(), True
             while iter_unlabeled.has_more:
-                yield iter_unlabeled.read_item(), True
+                yield iter_unlabeled.read_item(), False
 
         labeled_items = []
         unlabeled_items = []

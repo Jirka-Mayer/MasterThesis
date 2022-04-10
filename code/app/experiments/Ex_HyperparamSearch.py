@@ -1,4 +1,5 @@
 import argparse
+import pickle
 from typing import Optional
 import tensorflow as tf
 import os
@@ -7,6 +8,7 @@ import shutil
 from ..datasets.NoiseGenerator import NoiseGenerator
 from .Experiment import Experiment
 from ..models.DenoisingUnetModel import DenoisingUnetModel
+from ..models.ModelDirectory import ModelDirectory
 from ..datasets.DatasetFeeder import DatasetFeeder
 from ..datasets.muscima.Muscima import Muscima
 from ..datasets.muscima.SegmentationDescription import SegmentationDescription
@@ -85,9 +87,20 @@ class Ex_HyperparamSearch(Experiment):
         Gathers data from all completed experiment runs into a single
         csv file that can then be moved between machines more easily
         """
-        print("Implement gather...")
+        data = {}
+        ls = os.listdir(self.experiment_directory())
+        for model_name in os.listdir(self.experiment_directory()):
+            if not model_name.startswith(self.name + "__"):
+                continue
+            data[model_name] = ModelDirectory(self.experiment_directory(model_name)).load_metrics_csv()
+            print(model_name)
+        with open(self.experiment_directory("gathered.pkl"), "wb") as f:
+            pickle.dump(data, f)
 
     def plot(self, args: argparse.Namespace):
+        with open(self.experiment_directory("gathered.pkl"), "rb") as f:
+            data = pickle.load(f)
+        print(data)
         print("Implement plotting...")
 
     def compute_single_instance(self, opts: Options) -> float:

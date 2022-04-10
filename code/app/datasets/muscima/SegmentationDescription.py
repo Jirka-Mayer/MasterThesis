@@ -37,4 +37,40 @@ SegmentationDescription.NOTEHEADS = SegmentationDescription() \
         "noteheadFullSmall", "noteheadHalfSmall"
     ], nonempty=True)
 
-# TODO: common symbols
+SegmentationDescription.STEM = SegmentationDescription() \
+    .add_channel("stem", ["stem"], nonempty=True)
+
+SegmentationDescription.BEAM = SegmentationDescription() \
+    .add_channel("beam", ["beam"], nonempty=True)
+
+SegmentationDescription.FLAGS = SegmentationDescription() \
+    .add_channel("flags", [
+        "flag8thUp", "flag8thDown", "flag16thUp", "flag16thDown",
+        "flag32thUp", "flag32thDown", "flag64thUp", "flag64thDown",
+    ], nonempty=True)
+
+
+# 16th_rest
+# 8th_rest
+# quarter_rest
+# half_rest
+# whole_rest
+
+# c-clef
+# f-clef
+# g-clef
+
+# barlines
+# beam
+# stem
+# stafflines
+
+# flags
+# ledger_line
+# noteheads
+
+# duration-dot
+# double_sharp
+# flat
+# natural
+# sharp

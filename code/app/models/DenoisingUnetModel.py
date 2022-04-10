@@ -65,7 +65,7 @@ class DenoisingUnetModel(tf.keras.Model):
         segmentation_channels: int = 1,
         denoised_channels: int = 1,
         inner_features: int = 8,
-        depth: int = 2
+        depth: int = 3
     ):
         super().__init__()
 

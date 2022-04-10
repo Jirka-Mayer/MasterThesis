@@ -50,7 +50,11 @@ class Ex_HyperparamSearch(Experiment):
             self.build_model_name(opts)
         )
 
-        noise = NoiseGenerator(opts.seed)
+        noise = NoiseGenerator(
+            seed=opts.seed,
+            max_noise_size=Muscima.DPSS * 2,
+            dropout_ratio=0.25
+        )
 
         with DatasetFeeder(self.experiment_directory("cache")) as feeder:
             ds_train, ds_validate, ds_test = \

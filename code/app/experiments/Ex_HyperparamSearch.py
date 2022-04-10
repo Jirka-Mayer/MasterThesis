@@ -1,6 +1,8 @@
 import argparse
 import pickle
 from typing import Optional
+from webbrowser import get
+from numpy import math
 import tensorflow as tf
 import os
 import shutil
@@ -32,6 +34,11 @@ class Options:
         self.max_noise_size = int(kwargs["max_noise_size"])
         self.force = force
         self.dry_run = dry_run
+
+    def clone_set(self, option_name, value):
+        clone = Options(**vars(self))
+        setattr(clone, option_name, value)
+        return clone
 
 
 class Ex_HyperparamSearch(Experiment):
@@ -66,8 +73,8 @@ class Ex_HyperparamSearch(Experiment):
             self.plot(args)
     
     def search_supervision(self, args: argparse.Namespace):
-        for unsup_ratio in [0.0, 0.05, 0.1, 0.3, 0.5]:
-            for unsup_loss_weight in [8, 4, 1, 0.25, 0.125]:
+        for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
+            for unsup_loss_weight in [16, 8, 4, 1, 1/4, 1/8, 1/16]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=0.1,
@@ -99,9 +106,86 @@ class Ex_HyperparamSearch(Experiment):
 
     def plot(self, args: argparse.Namespace):
         with open(self.experiment_directory("gathered.pkl"), "rb") as f:
-            data = pickle.load(f)
-        print(data)
-        print("Implement plotting...")
+            instance_metrics = pickle.load(f)
+        
+        best_f1_score = {}
+        for k, metrics in instance_metrics.items():
+            best_f1_score[k] = max(
+                metrics,
+                key=lambda x: x["val_f1_score"]
+            )["val_f1_score"]
+
+        print("Instances sorted by their best F1 score:")
+        for k, v in sorted(best_f1_score.items(), key=lambda i: i[1]):
+            print(k, v)
+
+        all_model_options = [self.parse_model_name(k) for k in instance_metrics.keys()]
+
+        best_model_name = max(best_f1_score.items(), key=lambda i: i[1])[0]
+        best_model_options = self.parse_model_name(best_model_name)
+
+        self.plot_2d_slice(
+            "unsup_ratio", "unsup_loss_weight",
+            best_model_options, all_model_options, best_f1_score,
+            log_y=True
+        )
+
+        self.plot_slice("unsup_ratio",
+            best_model_options, all_model_options, best_f1_score)
+        self.plot_slice("unsup_loss_weight",
+            best_model_options, all_model_options, best_f1_score, log_x=True)
+
+    def plot_2d_slice(self, x_name, y_name, target_model_options, all_model_options, values, log_y=False):
+        filtered_options = []
+        keys = list(vars(target_model_options).keys())
+        for o in all_model_options:
+            take = True
+            for k in keys:
+                if k == x_name or k == y_name:
+                    continue
+                if getattr(target_model_options, k) != getattr(o, k):
+                    take = True
+                    break
+            if take:
+                filtered_options.append(o)
+        x = [getattr(o, x_name) for o in filtered_options]
+        y = [getattr(o, y_name) for o in filtered_options]
+        z = [values[self.build_model_name(o)] for o in filtered_options]
+
+        if log_y:
+            y = [math.log10(item) for item in y]
+            y_name += " (log10(y))"
+
+        # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
+        import matplotlib.pyplot as plt
+        ax = plt.axes(projection='3d')
+        ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor="none")
+        ax.set_xlabel(x_name)
+        ax.set_ylabel(y_name)
+        plt.show()
+
+    def plot_slice(self, option_name, best_model_options, all_model_options, values, log_x=False):
+        possible_xes = list(set(getattr(o, option_name) for o in all_model_options))
+        possible_xes_model_names = [
+            self.build_model_name(best_model_options.clone_set(option_name, x))
+            for x in possible_xes
+        ]
+        actual_xes = [
+            x for i, x in enumerate(possible_xes)
+            if possible_xes_model_names[i] in values
+        ]
+        actual_ys = [
+            values[possible_xes_model_names[i]] for i, x in enumerate(possible_xes)
+            if possible_xes_model_names[i] in values
+        ]
+        x, y = zip(*sorted(zip(actual_xes, actual_ys), key=lambda i: i[0]))
+        
+        import matplotlib.pyplot as plt
+        plt.plot(x, y, "o-")
+        plt.xlabel(option_name)
+        if log_x:
+            plt.xscale("log")
+        plt.show()
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)

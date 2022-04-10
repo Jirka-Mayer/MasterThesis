@@ -84,7 +84,7 @@ class NoiseGenerator:
 
     def _create_noisy_image(self, image: np.ndarray) -> np.ndarray:
         """Creates a noisy image by masking an existing image"""
-        noise = self._create_random_noise_mask(
+        noise, _ = self._create_random_noise_mask(
             height=image.shape[0],
             width=image.shape[1]
         )

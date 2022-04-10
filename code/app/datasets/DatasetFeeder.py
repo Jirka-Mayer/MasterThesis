@@ -9,8 +9,9 @@ class DatasetFeeder:
     Helper class that performs the last steps of feeding a dataset into a
     training pipeline (handles caching and prefetch)
     """
-    def __init__(self, cache_dir: str):
+    def __init__(self, cache_dir: str, dry_run=False):
         self.cache_dir = cache_dir
+        self.dry_run = dry_run
         self.known_datasets: List[Tuple[tf.data.Dataset, str]] = []
 
     def __enter__(self):
@@ -26,6 +27,10 @@ class DatasetFeeder:
         cache_path = os.path.join(self.cache_dir, name)
         
         os.makedirs(cache_path, exist_ok=True)
+
+        if self.dry_run:
+            print("WARNING: Dry-run enabled, for dataset " + name)
+            ds = ds.take(1)
 
         return ds \
             .snapshot(path=cache_path, compression=None) \

@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
+from typing import Optional
 from .ModelDirectory import ModelDirectory
 from .ThresholdingF1Score import ThresholdingF1Score
 
@@ -65,7 +66,8 @@ class DenoisingUnetModel(tf.keras.Model):
         segmentation_channels: int = 1,
         denoised_channels: int = 1,
         inner_features: int = 8,
-        depth: int = 3
+        depth: int = 3,
+        unsup_loss_weight: float = 1.0
     ):
         super().__init__()
 
@@ -77,6 +79,7 @@ class DenoisingUnetModel(tf.keras.Model):
         self.denoised_channels = denoised_channels
         self.inner_features = inner_features
         self.depth = depth
+        self.unsup_loss_weight = unsup_loss_weight
 
         ### Define the UNet model ###
 
@@ -125,7 +128,8 @@ class DenoisingUnetModel(tf.keras.Model):
             "segmentation_channels": self.segmentation_channels,
             "denoised_channels": self.denoised_channels,
             "inner_features": self.inner_features,
-            "depth": self.depth
+            "depth": self.depth,
+            "unsup_loss_weight": self.unsup_loss_weight
         }
 
     @classmethod
@@ -135,7 +139,8 @@ class DenoisingUnetModel(tf.keras.Model):
             segmentation_channels=config["segmentation_channels"],
             denoised_channels=config["denoised_channels"],
             inner_features=config["inner_features"],
-            depth=config["depth"]
+            depth=config["depth"],
+            unsup_loss_weight=config["unsup_loss_weight"]
         )
         model.finished_epochs = config["finished_epochs"]
         return model
@@ -168,7 +173,7 @@ class DenoisingUnetModel(tf.keras.Model):
                 regularization_losses=self.losses
             )
 
-            loss = seg_loss + noise_loss # TODO: magic hyperparameter here
+            loss = seg_loss + noise_loss * self.unsup_loss_weight # hyperparameter
 
         ### gradients & update step & return ###
         
@@ -190,7 +195,7 @@ class DenoisingUnetModel(tf.keras.Model):
     ########################
 
     @staticmethod
-    def load_or_create(model_directory: str):
+    def load_or_create(model_directory: str, **kwargs):
         dir = ModelDirectory(model_directory)
 
         model = dir.load_latest_checkpoint(
@@ -201,7 +206,7 @@ class DenoisingUnetModel(tf.keras.Model):
         )
 
         if model is None:
-            model = DenoisingUnetModel()
+            model = DenoisingUnetModel(**kwargs)
 
         model.model_directory = dir
 
@@ -217,7 +222,9 @@ class DenoisingUnetModel(tf.keras.Model):
         self,
         epochs: int,
         ds_train: tf.data.Dataset,
-        ds_validate: tf.data.Dataset
+        ds_validate: tf.data.Dataset,
+        save_checkpoints: bool = False,
+        early_stop_after: Optional[int] = None
     ):
         self.model_directory.assert_folder_structure()
 
@@ -229,35 +236,58 @@ class DenoisingUnetModel(tf.keras.Model):
         def _update_finished_epochs(e, l):
             self.finished_epochs = e + 1
 
+        callbacks = [
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=_update_finished_epochs
+            ),
+            tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda e, l: self.visualize(
+                    e + 1, visualization_batch
+                )
+            ),
+            tf.keras.callbacks.CSVLogger(
+                self.model_directory.metrics_csv_path,
+                separator=',',
+                append=True
+            )
+        ]
+
+        if save_checkpoints:
+            callbacks.append(
+                tf.keras.callbacks.ModelCheckpoint(
+                    filepath=self.model_directory.checkpoint_format_path,
+                    monitor="val_loss",
+                    verbose=1
+                ),
+            )
+
+        if early_stop_after is not None:
+            record = self.model_directory.get_best_epoch_metrics_record()
+            baseline = None
+            if record is not None:
+                if int(record["epoch"]) + 1 == self.finished_epochs:
+                    print("Using early stopping baseline from the metrics file.")
+                    baseline = record["val_loss"]
+            callbacks.append(
+                tf.keras.callbacks.EarlyStopping(
+                    monitor="val_loss",
+                    verbose=1,
+                    patience=early_stop_after,
+                    mode="min",
+                    baseline=baseline
+                )
+            )
+
         self.fit(
             ds_train,
             epochs=epochs,
             initial_epoch=self.finished_epochs,
             validation_data=ds_validate,
-            callbacks=[
-                tf.keras.callbacks.LambdaCallback(
-                    on_epoch_end=_update_finished_epochs
-                ),
-                tf.keras.callbacks.LambdaCallback(
-                    on_epoch_end=lambda e, l: self.visualize(
-                        e + 1, visualization_batch
-                    )
-                ),
-                # tf.keras.callbacks.ModelCheckpoint(
-                #     filepath=self.model_directory.checkpoint_format_path,
-                #     monitor="val_loss",
-                #     verbose=1
-                # ),
-                tf.keras.callbacks.CSVLogger(
-                    self.model_directory.metrics_csv_path,
-                    separator=',',
-                    append=True
-                )
-            ]
+            callbacks=callbacks
         )
 
     def _build_visualization_batch(self, ds_train: tf.data.Dataset):
-        VISUALIZE_COUNT = 8
+        VISUALIZE_COUNT = 10
 
         visu_sup = ds_train.map(lambda x, y: (x[0], y[0])) \
             .unbatch() \

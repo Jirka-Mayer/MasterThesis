@@ -75,8 +75,8 @@ Chapters of the thesis and their content:
 > Experiment `hyperparam-search`
 
 STEP 0: use batch size 16, full resolution, ignore test set, fix seed, on noteheads,
-            implement noise generation with max noise size 1ss and 25% dropout
-STEP 1: implement early stopping with grace period like 10 epochs
+            implement noise generation with max noise size 2ss and 25% dropout
+STEP 1: implement early stopping with grace period 10 epochs
 STEP 2: write the best f1 validation score into DONE.txt file for each run
 STEP 3: do a grid search over *supervision ratio* cross *unsup loss weight*
     (to get a feel for their interplay) (5x5 = 25)

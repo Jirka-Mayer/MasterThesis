@@ -1,5 +1,6 @@
 import os
-from typing import Any, Tuple
+import csv
+from typing import Any, Dict, List, Optional
 import tensorflow as tf
 
 
@@ -58,3 +59,23 @@ class ModelDirectory:
             custom_objects=custom_objects
         )
         return model
+
+    def load_metrics_csv(self) -> List[Dict[str, float]]:
+        try:
+            with open(self.metrics_csv_path, "r") as f:
+                return [
+                    {k: float(v) for k, v in row.items()}
+                    for row in csv.DictReader(f, skipinitialspace=True)
+                ]
+        except IOError:
+            return []
+
+    def get_best_epoch_metrics_record(
+        self,
+        by_metric: str = "val_loss",
+        search_for=min
+    ) -> Optional[Dict[str, float]]:
+        metrics = self.load_metrics_csv()
+        if len(metrics) == 0:
+            return None
+        return search_for(metrics, key=lambda x: x[by_metric])

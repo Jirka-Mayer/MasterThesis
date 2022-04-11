@@ -28,6 +28,11 @@ SUP_SEARCH__SUP_RATIO = 0.1
 SUP_SEARCH__NOISE_DROPOUT = 0.25
 SUP_SEARCH__NOISE_SIZE = int(Muscima.DPSS * 2)
 
+# constant parameters for the noise grid search
+NOISE_SEARCH__SUP_RATIO = 0.1
+NOISE_SEARCH__UNSUP_RATIO = 0.2
+NOISE_SEARCH__UNSUP_LOSS_WEIGHT = 1e-4
+
 
 class Options:
     def __init__(self, force=False, dry_run=False, **kwargs):
@@ -81,7 +86,7 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
-            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32, 1/128, 1/512, 0.0001, 0.00001, 1e-6, 1e-7, 1e-8]:
+            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32, 1/128, 1/512, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-20]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=SUP_SEARCH__SUP_RATIO,
@@ -94,7 +99,18 @@ class Ex_HyperparamSearch(Experiment):
                 ))
 
     def search_noise(self, args: argparse.Namespace):
-        print("Implement training...")
+        for noise_dropout in [0.1, 0.2, 0.3, 0.4, 0.5]:
+            for max_noise_size_ss in [0.5, 1, 2, 3, 4]:
+                self.compute_single_instance(Options(
+                    seed=args.seed,
+                    sup_ratio=NOISE_SEARCH__SUP_RATIO,
+                    unsup_ratio=NOISE_SEARCH__UNSUP_RATIO,
+                    unsup_loss_weight=NOISE_SEARCH__UNSUP_LOSS_WEIGHT,
+                    noise_dropout=noise_dropout,
+                    max_noise_size=int(max_noise_size_ss * Muscima.DPSS),
+                    force=args.force,
+                    dry_run=args.dry_run
+                ))
 
     def gather(self, args: argparse.Namespace):
         """
@@ -140,13 +156,30 @@ class Ex_HyperparamSearch(Experiment):
             Options(
                 seed=args.seed,
                 sup_ratio=SUP_SEARCH__SUP_RATIO,
-                unsup_ratio=0.0, # will be ignored
-                unsup_loss_weight=1.0, # will be ignored
+                unsup_ratio=0, # will be ignored
+                unsup_loss_weight=0, # will be ignored
                 noise_dropout=SUP_SEARCH__NOISE_DROPOUT,
                 max_noise_size=SUP_SEARCH__NOISE_SIZE
             ),
             all_model_options, best_f1_score,
             log_x=True
+        )
+
+        print()
+        print("# Noise search results #")
+        print("# For seed:", args.seed)
+
+        self.plot_2d_slice(
+            "noise_dropout", "max_noise_size",
+            Options(
+                seed=args.seed,
+                sup_ratio=NOISE_SEARCH__SUP_RATIO,
+                unsup_ratio=NOISE_SEARCH__UNSUP_RATIO,
+                unsup_loss_weight=NOISE_SEARCH__UNSUP_LOSS_WEIGHT,
+                noise_dropout=0, # will be ignored
+                max_noise_size=0 # will be ignored
+            ),
+            all_model_options, best_f1_score
         )
 
         print()

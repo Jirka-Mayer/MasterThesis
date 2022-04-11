@@ -82,7 +82,7 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
-            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32]:
+            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32, 1/128, 1/512]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=SUP_SEARCH__SUP_RATIO,
@@ -137,7 +137,7 @@ class Ex_HyperparamSearch(Experiment):
         print("# For seed:", args.seed)
 
         self.plot_2d_slice(
-            "unsup_ratio", "unsup_loss_weight",
+            "unsup_loss_weight", "unsup_ratio",
             Options(
                 seed=args.seed,
                 sup_ratio=SUP_SEARCH__SUP_RATIO,
@@ -147,7 +147,7 @@ class Ex_HyperparamSearch(Experiment):
                 max_noise_size=SUP_SEARCH__NOISE_SIZE
             ),
             all_model_options, best_f1_score,
-            log_y=True
+            log_x=True
         )
 
         print()
@@ -189,27 +189,25 @@ class Ex_HyperparamSearch(Experiment):
         ax.set_ylabel(y_name)
         plt.show()
 
-    def plot_slice(self, option_name, best_model_options, all_model_options, values, log_x=False):
-        possible_xes = list(set(getattr(o, option_name) for o in all_model_options))
-        possible_xes_model_names = [
-            self.build_model_name(best_model_options.clone_set(option_name, x))
-            for x in possible_xes
+    def plot_slice(
+        self, x_name,
+        origin_options, all_options,
+        values, log_x=False
+    ):
+        keys = set(vars(origin_options).keys()) - set([x_name])
+        filtered_options = [
+            o for o in all_options
+            if all(getattr(origin_options, k) == getattr(o, k) for k in keys)
         ]
-        actual_xes = [
-            x for i, x in enumerate(possible_xes)
-            if possible_xes_model_names[i] in values
-        ]
-        actual_ys = [
-            values[possible_xes_model_names[i]] for i, x in enumerate(possible_xes)
-            if possible_xes_model_names[i] in values
-        ]
-        x, y = zip(*sorted(zip(actual_xes, actual_ys), key=lambda i: i[0]))
+        x = [getattr(o, x_name) for o in filtered_options]
+        y = [values[self.build_model_name(o)] for o in filtered_options]
+        x, y = zip(*sorted(zip(x, y), key=lambda i: i[0])) # sort by x
         
         import matplotlib.pyplot as plt
-        plt.plot(x, y, "o-")
-        plt.xlabel(option_name)
-        if log_x:
-            plt.xscale("log")
+        ax = plt.axes()
+        ax.plot(x, y, "o-")
+        ax.set_xlabel(x_name)
+        if log_x: ax.set_xscale("log")
         plt.show()
 
     def remove_locks(self):

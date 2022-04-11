@@ -1,5 +1,6 @@
 import argparse
 import pickle
+import time
 from typing import Optional
 from webbrowser import get
 from numpy import math
@@ -54,7 +55,7 @@ class Ex_HyperparamSearch(Experiment):
     def define_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument(
             "command", type=str,
-            help="One of: search-supervision, search-noise, gather, plot"
+            help="One of: search-supervision, search-noise, gather, plot, remove-locks"
         )
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
         parser.add_argument("--force", default=False, action="store_true",
@@ -71,6 +72,8 @@ class Ex_HyperparamSearch(Experiment):
             self.gather(args)
         elif args.command == "plot":
             self.plot(args)
+        elif args.command == "remove-locks":
+            self.remove_locks()
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
@@ -95,7 +98,6 @@ class Ex_HyperparamSearch(Experiment):
         csv file that can then be moved between machines more easily
         """
         data = {}
-        ls = os.listdir(self.experiment_directory())
         for model_name in os.listdir(self.experiment_directory()):
             if not model_name.startswith(self.name + "__"):
                 continue
@@ -162,7 +164,10 @@ class Ex_HyperparamSearch(Experiment):
         # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
         import matplotlib.pyplot as plt
         ax = plt.axes(projection='3d')
-        ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor="none")
+        try:
+            ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor="none")
+        except:
+            ax.scatter(x, y, z, c=z, cmap='viridis', linewidth=5.0)
         ax.set_xlabel(x_name)
         ax.set_ylabel(y_name)
         plt.show()
@@ -190,12 +195,23 @@ class Ex_HyperparamSearch(Experiment):
             plt.xscale("log")
         plt.show()
 
+    def remove_locks(self):
+        """Removes all lock files. Run this after a crashed execution."""
+        for model_name in os.listdir(self.experiment_directory()):
+            if not model_name.startswith(self.name + "__"):
+                continue
+            model_directory = self.experiment_directory(model_name)
+            lock_path = os.path.join(model_directory, "lock")
+            if os.path.exists(lock_path):
+                print("Removing lock for:", model_name)
+                os.remove(lock_path)
+
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)
 
         model_name = self.build_model_name(opts)
         model_directory = self.experiment_directory(model_name)
-        
+
         print("#" * (len(model_name) + 4)) # print header
         print("# " + model_name + " #")
         print("#" * (len(model_name) + 4))
@@ -207,8 +223,19 @@ class Ex_HyperparamSearch(Experiment):
             print("Skipping, already computed.")
             return
 
+        # check for lock
+        lock_path = os.path.join(model_directory, "lock")
+        if os.path.exists(lock_path):
+            print("Skipping due to lock present.")
+            return
+
         # clear the model directory before running the experiment instance
         shutil.rmtree(model_directory, ignore_errors=True)
+        os.makedirs(model_directory, exist_ok=True)
+
+        # create lock
+        with open(lock_path, "w") as f:
+            f.write("{}-{}\n".format(str(os.getpid()), str(time.time())))
 
         noise = NoiseGenerator(
             seed=opts.seed,
@@ -216,7 +243,9 @@ class Ex_HyperparamSearch(Experiment):
             dropout_ratio=opts.noise_dropout
         )
 
-        cache_dir = self.experiment_directory("cache")
+        cache_dir = self.experiment_directory(
+            "cache-{}-{}".format(str(os.getpid()), str(time.time()))
+        )
 
         with DatasetFeeder(cache_dir, opts.dry_run) as feeder:
             ds_train, ds_validate, ds_test = \
@@ -255,6 +284,10 @@ class Ex_HyperparamSearch(Experiment):
                 search_for=max
             )
             self.write_done_file(model_directory, record["val_f1_score"])
+
+            # clear the lock
+            if os.path.exists(lock_path):
+                os.remove(lock_path)
 
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"

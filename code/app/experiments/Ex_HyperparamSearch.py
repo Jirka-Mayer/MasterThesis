@@ -31,7 +31,7 @@ SUP_SEARCH__NOISE_SIZE = int(Muscima.DPSS * 2)
 # constant parameters for the noise grid search
 NOISE_SEARCH__SUP_RATIO = 0.1
 NOISE_SEARCH__UNSUP_RATIO = 0.2
-NOISE_SEARCH__UNSUP_LOSS_WEIGHT = 1e-4
+NOISE_SEARCH__UNSUP_LOSS_WEIGHT = 0.1
 
 
 class Options:
@@ -86,7 +86,7 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in reversed([0.0, 0.05, 0.1, 0.2, 0.3, 0.5]):
-            for unsup_loss_weight in [10, 1, 0.1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8]:
+            for unsup_loss_weight in [10, 1, 0.1, 0.01]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=SUP_SEARCH__SUP_RATIO,

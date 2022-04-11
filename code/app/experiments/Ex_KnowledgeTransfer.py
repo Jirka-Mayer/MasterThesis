@@ -51,8 +51,12 @@ class Ex_KnowledgeTransfer(Experiment):
             help="One of: train"
         )
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
+        parser.add_argument("--epochs", default=MAX_EPOCHS, type=int, help="Overwrites max epochs.")
 
     def run(self, args: argparse.Namespace):
+        global MAX_EPOCHS
+        MAX_EPOCHS = args.epochs
+
         if args.command == "train":
             self.train(args)
     

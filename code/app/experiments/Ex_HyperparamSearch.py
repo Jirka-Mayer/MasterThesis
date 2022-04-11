@@ -24,6 +24,11 @@ BATCH_SIZE = 16
 MAX_EPOCHS = 100
 EARLY_STOPPING_PATIENCE = 10
 
+# constant parameters for the supervision grid search
+SUP_SEARCH__SUP_RATIO = 0.1
+SUP_SEARCH__NOISE_DROPOUT = 0.25
+SUP_SEARCH__NOISE_SIZE = int(Muscima.DPSS * 2)
+
 
 class Options:
     def __init__(self, force=False, dry_run=False, **kwargs):
@@ -77,16 +82,16 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
-            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8]:
+            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
-                    sup_ratio=0.1,
+                    sup_ratio=SUP_SEARCH__SUP_RATIO,
                     unsup_ratio=unsup_ratio,
-                    noise_dropout=0.25,
-                    max_noise_size=int(Muscima.DPSS * 2),
+                    unsup_loss_weight=unsup_loss_weight,
+                    noise_dropout=SUP_SEARCH__NOISE_DROPOUT,
+                    max_noise_size=SUP_SEARCH__NOISE_SIZE,
                     force=args.force,
-                    dry_run=args.dry_run,
-                    unsup_loss_weight=unsup_loss_weight
+                    dry_run=args.dry_run
                 ))
 
     def search_noise(self, args: argparse.Namespace):
@@ -114,6 +119,7 @@ class Ex_HyperparamSearch(Experiment):
         for k, metrics in instance_metrics.items():
             if len(metrics) == 0:
                 print("Metrics are empty for:", k)
+                best_f1_score[k] = float("NaN")
                 continue
             best_f1_score[k] = max(
                 metrics,
@@ -126,40 +132,51 @@ class Ex_HyperparamSearch(Experiment):
 
         all_model_options = [self.parse_model_name(k) for k in instance_metrics.keys()]
 
-        best_model_name = max(best_f1_score.items(), key=lambda i: i[1])[0]
-        best_model_options = self.parse_model_name(best_model_name)
+        print()
+        print("# Supervision search results #")
+        print("# For seed:", args.seed)
 
         self.plot_2d_slice(
             "unsup_ratio", "unsup_loss_weight",
-            best_model_options, all_model_options, best_f1_score,
+            Options(
+                seed=args.seed,
+                sup_ratio=SUP_SEARCH__SUP_RATIO,
+                unsup_ratio=0.0, # will be ignored
+                unsup_loss_weight=1.0, # will be ignored
+                noise_dropout=SUP_SEARCH__NOISE_DROPOUT,
+                max_noise_size=SUP_SEARCH__NOISE_SIZE
+            ),
+            all_model_options, best_f1_score,
             log_y=True
         )
+
+        print()
+        print("# Overall best model slices #")
+
+        best_model_name = max(best_f1_score.items(), key=lambda i: i[1])[0]
+        best_model_options = self.parse_model_name(best_model_name)
 
         self.plot_slice("unsup_ratio",
             best_model_options, all_model_options, best_f1_score)
         self.plot_slice("unsup_loss_weight",
             best_model_options, all_model_options, best_f1_score, log_x=True)
 
-    def plot_2d_slice(self, x_name, y_name, target_model_options, all_model_options, values, log_y=False):
-        filtered_options = []
-        keys = list(vars(target_model_options).keys())
-        for o in all_model_options:
-            take = True
-            for k in keys:
-                if k == x_name or k == y_name:
-                    continue
-                if getattr(target_model_options, k) != getattr(o, k):
-                    take = True
-                    break
-            if take:
-                filtered_options.append(o)
+    def plot_2d_slice(
+        self, x_name, y_name,
+        origin_options, all_options,
+        values, log_x=False, log_y=False
+    ):
+        keys = set(vars(origin_options).keys()) - set([x_name, y_name])
+        filtered_options = [
+            o for o in all_options
+            if all(getattr(origin_options, k) == getattr(o, k) for k in keys)
+        ]
         x = [getattr(o, x_name) for o in filtered_options]
         y = [getattr(o, y_name) for o in filtered_options]
         z = [values[self.build_model_name(o)] for o in filtered_options]
 
-        if log_y:
-            y = [math.log10(item) for item in y]
-            y_name += " (log10(y))"
+        if log_x: x = [math.log10(item) for item in x] ; x_name += " (log10(x))"
+        if log_y: y = [math.log10(item) for item in y] ; y_name += " (log10(y))"
 
         # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
         import matplotlib.pyplot as plt

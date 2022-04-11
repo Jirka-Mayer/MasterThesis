@@ -74,7 +74,7 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
-            for unsup_loss_weight in [16, 8, 4, 1, 1/4, 1/8, 1/16]:
+            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=0.1,
@@ -107,9 +107,12 @@ class Ex_HyperparamSearch(Experiment):
     def plot(self, args: argparse.Namespace):
         with open(self.experiment_directory("gathered.pkl"), "rb") as f:
             instance_metrics = pickle.load(f)
-        
+
         best_f1_score = {}
         for k, metrics in instance_metrics.items():
+            if len(metrics) == 0:
+                print("Metrics are empty for:", k)
+                continue
             best_f1_score[k] = max(
                 metrics,
                 key=lambda x: x["val_f1_score"]
@@ -234,7 +237,10 @@ class Ex_HyperparamSearch(Experiment):
             ds_validate = feeder(ds_validate)
             ds_test = feeder(ds_test)
 
-            model = DenoisingUnetModel.load_or_create(model_directory)
+            model = DenoisingUnetModel.load_or_create(
+                model_directory,
+                unsup_loss_weight=opts.unsup_loss_weight
+            )
             model.perform_training(
                 epochs=(MAX_EPOCHS if not opts.dry_run else 2),
                 ds_train=ds_train,

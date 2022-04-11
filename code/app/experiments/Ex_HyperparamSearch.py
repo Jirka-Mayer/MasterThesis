@@ -81,7 +81,7 @@ class Ex_HyperparamSearch(Experiment):
     
     def search_supervision(self, args: argparse.Namespace):
         for unsup_ratio in [0.0, 0.05, 0.1, 0.2, 0.3, 0.5]:
-            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32, 1/128, 1/512, 0.0001, 0.00001]:
+            for unsup_loss_weight in [8, 4, 1, 1/4, 1/8, 1/16, 1/32, 1/128, 1/512, 0.0001, 0.00001, 1e-6, 1e-7, 1e-8]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
                     sup_ratio=SUP_SEARCH__SUP_RATIO,

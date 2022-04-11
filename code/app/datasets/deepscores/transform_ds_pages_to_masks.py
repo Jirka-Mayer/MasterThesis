@@ -40,13 +40,14 @@ def _construct_deepscores_page_mask(
     data = tf.io.read_file(seg_path)
     seg_img = tf.io.decode_png(data).numpy() # int32 0-255 RGB image (0=R 1=G 2=B)
 
-    # create color filter
     colors_rgb = meta.classes_to_colors_rgb(classes)
-    colors_num = [r + g * 256 + b * 256 * 256 for r, g, b in colors_rgb]
-    print(colors_num)
 
-    # create mask
-    seg_img_num = seg_img[:,:,0] + seg_img[:,:,1] * 256 + seg_img[:,:,2] * 256 * 256
-    mask = np.isin(seg_img_num, colors_num)
+    mask = None
+    for c in colors_rgb:
+        class_mask = np.all(seg_img == c, axis=-1)
+        if mask is None:
+            mask = class_mask
+        else:
+            mask = np.logical_or(mask, class_mask)
 
     return mask.astype(np.float32) # bool to float

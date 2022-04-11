@@ -232,7 +232,6 @@ class DenoisingUnetModel(tf.keras.Model):
 
         if self.finished_epochs == 0:
             self.visualize(0, visualization_batch)
-            exit() # TODO: DEBUG
 
         def _update_finished_epochs(e, l):
             self.finished_epochs = e + 1

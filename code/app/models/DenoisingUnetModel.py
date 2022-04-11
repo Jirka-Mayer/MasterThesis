@@ -359,6 +359,16 @@ class DenoisingUnetModel(tf.keras.Model):
         )
 
     def perform_evaluation(self, ds_test):
+        self.model_directory.assert_folder_structure()
+        
+        self.visualize_evaluation(ds_test)
+        
         print("Evaluating on the test set:")
         results = self.evaluate(ds_test, return_dict=True)
         print(results)
+
+    def visualize_evaluation(self, ds_test):
+        for batch, (x, y) in enumerate(ds_test.as_numpy_iterator()):
+            print("Visualizing batch", batch)
+            y_pred = self.call(x, training=False)
+            self.visualize_xy("eval", batch, x, y_pred, y)

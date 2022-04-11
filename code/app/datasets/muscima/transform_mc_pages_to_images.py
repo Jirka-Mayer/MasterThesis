@@ -1,9 +1,9 @@
 import tensorflow as tf
 from .MuscimaPage import MuscimaPage
-from .transform_pages_to_image_paths import transform_pages_to_image_paths
+from .transform_mc_pages_to_image_paths import transform_mc_pages_to_image_paths
 
 
-def transform_pages_to_images():
+def transform_mc_pages_to_images():
     def _load_img(path):
         data = tf.io.read_file(path)
         img = tf.io.decode_png(data)
@@ -13,7 +13,7 @@ def transform_pages_to_images():
 
     def _the_transformation(pages_ds):
         return pages_ds \
-            .apply(transform_pages_to_image_paths()) \
+            .apply(transform_mc_pages_to_image_paths()) \
             .map(_load_img, num_parallel_calls=tf.data.AUTOTUNE)
     
     return _the_transformation

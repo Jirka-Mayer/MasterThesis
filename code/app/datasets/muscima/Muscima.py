@@ -1,12 +1,12 @@
 from typing import Callable, Optional, Tuple
 import tensorflow as tf
 
-from .SegmentationDescription import SegmentationDescription
+from ..SegmentationDescription import SegmentationDescription
 from ..transform_resize_images import transform_resize_images
 from ..transform_sample_tiles import transform_sample_tiles
-from .transform_pages_to_tile_counts import transform_pages_to_tile_counts
-from .transform_pages_to_masks import transform_pages_to_masks
-from .transform_pages_to_images import transform_pages_to_images
+from .transform_mc_pages_to_tile_counts import transform_mc_pages_to_tile_counts
+from .transform_mc_pages_to_masks import transform_mc_pages_to_masks
+from .transform_mc_pages_to_images import transform_mc_pages_to_images
 from .MuscimaPageList import MuscimaPageList
 from ..create_semisup_dataset import create_semisup_dataset
 
@@ -51,8 +51,8 @@ class Muscima:
         # training dataset
         sup_pages_ds = sup_pages.as_tf_dataset()
         ds_sup = tf.data.Dataset.zip(datasets=(
-            sup_pages_ds.apply(transform_pages_to_images()),
-            sup_pages_ds.apply(transform_pages_to_masks(segdesc))
+            sup_pages_ds.apply(transform_mc_pages_to_images()),
+            sup_pages_ds.apply(transform_mc_pages_to_masks(segdesc))
         ))
         ds_sup = ds_sup.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
@@ -61,9 +61,9 @@ class Muscima:
             seed=seed,
             tile_size_wh=tile_size_wh,
             tile_count_ds=sup_pages_ds.apply(
-                transform_pages_to_tile_counts(tile_size_wh)
+                transform_mc_pages_to_tile_counts(tile_size_wh)
             ),
-            nonempty_channels=segdesc.nonempty_channels()
+            oversample_channels=segdesc.oversampled_channel_indices()
         ))
         ds_sup = ds_sup.shuffle(
             buffer_size=1000,
@@ -72,7 +72,7 @@ class Muscima:
         )
 
         unsup_pages_ds = unsup_pages.as_tf_dataset()
-        ds_unsup = unsup_pages_ds.apply(transform_pages_to_images())
+        ds_unsup = unsup_pages_ds.apply(transform_mc_pages_to_images())
         ds_unsup = ds_unsup.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
         )
@@ -81,9 +81,9 @@ class Muscima:
             seed=seed,
             tile_size_wh=tile_size_wh,
             tile_count_ds=unsup_pages_ds.apply(
-                transform_pages_to_tile_counts(tile_size_wh)
+                transform_mc_pages_to_tile_counts(tile_size_wh)
             ),
-            nonempty_channels=[]
+            oversample_channels=[]
         ))
         ds_unsup = ds_unsup.shuffle(
             buffer_size=1000,
@@ -96,8 +96,8 @@ class Muscima:
         # validation dataset
         validation_pages_ds = validation_pages.as_tf_dataset()
         ds_validate = tf.data.Dataset.zip(datasets=(
-            validation_pages_ds.apply(transform_pages_to_images()),
-            validation_pages_ds.apply(transform_pages_to_masks(segdesc))
+            validation_pages_ds.apply(transform_mc_pages_to_images()),
+            validation_pages_ds.apply(transform_mc_pages_to_masks(segdesc))
         ))
         ds_validate = ds_validate.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
@@ -107,8 +107,8 @@ class Muscima:
         # testing dataset
         test_pages_ds = test_pages.as_tf_dataset()
         ds_test = tf.data.Dataset.zip(datasets=(
-            test_pages_ds.apply(transform_pages_to_images()),
-            test_pages_ds.apply(transform_pages_to_masks(segdesc))
+            test_pages_ds.apply(transform_mc_pages_to_images()),
+            test_pages_ds.apply(transform_mc_pages_to_masks(segdesc))
         ))
         ds_test = ds_test.apply(
             transform_resize_images(input_scale_factor, input_scale_method)

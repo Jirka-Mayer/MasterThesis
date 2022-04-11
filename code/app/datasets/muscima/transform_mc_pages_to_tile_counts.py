@@ -3,7 +3,7 @@ import tensorflow as tf
 from .MuscimaPage import MuscimaPage
 
 
-def transform_pages_to_tile_counts(tile_size_wh: Tuple[int, int]):
+def transform_mc_pages_to_tile_counts(tile_size_wh: Tuple[int, int]):
     tile_width, tile_height = tile_size_wh
     tile_pixels = tile_width * tile_height
 

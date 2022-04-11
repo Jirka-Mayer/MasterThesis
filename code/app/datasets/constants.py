@@ -14,3 +14,16 @@ CVCMUSCIMA_IDEAL = os.path.join(
     DATASETS_PATH,
     "CvcMuscima_StaffRemoval/CvcMuscima-Distortions/ideal"
 )
+
+DEEPSCORES_PATH = os.path.join(
+    DATASETS_PATH,
+    "DeepScoresV2/ds2_dense"
+)
+DEEPSCORES_TEST_ANNOTATIONS = os.path.join(
+    DEEPSCORES_PATH,
+    "deepscores_test.json"
+)
+DEEPSCORES_TRAIN_ANNOTATIONS = os.path.join(
+    DEEPSCORES_PATH,
+    "deepscores_train.json"
+)

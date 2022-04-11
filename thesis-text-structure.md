@@ -111,7 +111,9 @@ for all symbol classes!
     the world out there, so we add unsupervised data from the world and
     measure the segmentation on the world (was the segmentation transfered?)
 - muscima++ to deepscores
-- deepscores to muscima++
+- deepscores to muscima++ <--- this one!
+
+> Experiment `knowledge-transfer`
 
 ### Comparison to Other Works
 

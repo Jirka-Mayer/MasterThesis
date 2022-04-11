@@ -13,7 +13,7 @@ from ..models.DenoisingUnetModel import DenoisingUnetModel
 from ..models.ModelDirectory import ModelDirectory
 from ..datasets.DatasetFeeder import DatasetFeeder
 from ..datasets.muscima.Muscima import Muscima
-from ..datasets.muscima.SegmentationDescription import SegmentationDescription
+from ..datasets.SegmentationDescription import SegmentationDescription
 
 
 VALIDATION_RATIO = 0.1
@@ -162,7 +162,8 @@ class Ex_HyperparamSearch(Experiment):
                 max_noise_size=SUP_SEARCH__NOISE_SIZE
             ),
             all_model_options, best_f1_score,
-            log_x=True
+            log_x=True,
+            # flatten=["seed"]
         )
 
         print()
@@ -196,9 +197,10 @@ class Ex_HyperparamSearch(Experiment):
     def plot_2d_slice(
         self, x_name, y_name,
         origin_options, all_options,
-        values, log_x=False, log_y=False
+        values, log_x=False, log_y=False,
+        flatten=[]
     ):
-        keys = set(vars(origin_options).keys()) - set([x_name, y_name])
+        keys = set(vars(origin_options).keys()) - set([x_name, y_name] + flatten)
         filtered_options = [
             o for o in all_options
             if all(getattr(origin_options, k) == getattr(o, k) for k in keys)
@@ -213,10 +215,13 @@ class Ex_HyperparamSearch(Experiment):
         # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
         import matplotlib.pyplot as plt
         ax = plt.axes(projection='3d')
-        try:
-            ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor="none")
-        except:
+        if len(flatten) > 0:
             ax.scatter(x, y, z, c=z, cmap='viridis', linewidth=5.0)
+        else:
+            try:
+                ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor="none")
+            except:
+                ax.scatter(x, y, z, c=z, cmap='viridis', linewidth=5.0)
         ax.set_xlabel(x_name)
         ax.set_ylabel(y_name)
         plt.show()

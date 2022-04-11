@@ -9,7 +9,7 @@ def transform_sample_tiles(
     seed: int,
     tile_size_wh: Tuple[int, int],
     tile_count_ds: tf.data.Dataset,
-    nonempty_channels: List[int]
+    oversample_channels: List[int]
 ):
     rnd = random.Random(seed)
     tile_width, tile_height = tile_size_wh
@@ -25,7 +25,7 @@ def transform_sample_tiles(
                 images_ds.as_numpy_iterator(), tile_count_ds.as_numpy_iterator()
             ):
                 image = np.concatenate([image_x, image_y], axis=2)
-                nonempty_image_channels = [ci + 1 for ci in nonempty_channels]
+                nonempty_image_channels = [ci + 1 for ci in oversample_channels]
                 for _ in range(tile_count):
                     tile = _sample_tile_from_image(
                         image, tile_size_wh, rnd,
@@ -50,7 +50,7 @@ def _sample_tile_from_image(
     image: np.ndarray,
     tile_size_wh: Tuple[int, int],
     rnd: random.Random,
-    nonempty_channels: List[int]
+    oversample_channels: List[int]
 ) -> Dict[str, np.ndarray]:
     w, h = tile_size_wh
     for attempt in range(5): # resampling attempts
@@ -62,7 +62,7 @@ def _sample_tile_from_image(
         tile = image[yf:yt, xf:xt, :]
 
         retry = False
-        for channel_index in nonempty_channels:
+        for channel_index in oversample_channels:
             if np.all(tile[:, :, channel_index] < 0.1):
                 retry = True
 

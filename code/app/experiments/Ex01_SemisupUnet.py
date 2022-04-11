@@ -6,7 +6,7 @@ from .Experiment import Experiment
 from ..models.DenoisingUnetModel import DenoisingUnetModel
 from ..datasets.DatasetFeeder import DatasetFeeder
 from ..datasets.muscima.Muscima import Muscima
-from ..datasets.muscima.SegmentationDescription import SegmentationDescription
+from ..datasets.SegmentationDescription import SegmentationDescription
 
 
 class Options:

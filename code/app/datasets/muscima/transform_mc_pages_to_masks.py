@@ -3,10 +3,10 @@ import numpy as np
 import mung
 from typing import List
 from .MuscimaPage import MuscimaPage
-from .SegmentationDescription import SegmentationDescription
+from ..SegmentationDescription import SegmentationDescription
 
 
-def transform_pages_to_masks(segdesc: SegmentationDescription):
+def transform_mc_pages_to_masks(segdesc: SegmentationDescription):
     def _the_transformation(pages_ds):
         def _the_generator():
             for w, p in pages_ds.as_numpy_iterator():
@@ -33,10 +33,10 @@ def transform_pages_to_masks(segdesc: SegmentationDescription):
 
 
 def _construct_muscima_page_mask(page: MuscimaPage, node_classes: List[str]) -> np.ndarray:
-    image = page.load_ideal_image_as_numpy()
+    w, h = page.dimensions_via_magic()
     nodes = page.load_nodes()
 
-    mask = np.zeros(shape=(image.shape[0], image.shape[1]), dtype=np.float32)
+    mask = np.zeros(shape=(h, w), dtype=np.float32)
     for node in nodes:
         if node.class_name in node_classes:
             _print_mask_into_image(mask, node)

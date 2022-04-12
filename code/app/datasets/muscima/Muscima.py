@@ -51,7 +51,7 @@ class Muscima:
         # training dataset
         sup_pages_ds = sup_pages.as_tf_dataset()
         sup_pages_ds = sup_pages_ds.shuffle(
-            buffer_size=len(sup_pages_ds),
+            buffer_size=max(len(sup_pages_ds), 1),
             seed=dataset_seed,
             reshuffle_each_iteration=False
         )
@@ -78,7 +78,7 @@ class Muscima:
 
         unsup_pages_ds = unsup_pages.as_tf_dataset()
         unsup_pages_ds = unsup_pages_ds.shuffle(
-            buffer_size=len(unsup_pages_ds),
+            buffer_size=max(len(unsup_pages_ds), 1),
             seed=dataset_seed,
             reshuffle_each_iteration=False
         )

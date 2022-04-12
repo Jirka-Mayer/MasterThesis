@@ -19,10 +19,10 @@ from ..datasets.TransferDataset import TransferDataset
 
 VALIDATION_PAGES = 10
 SUPERVISED_PAGES = 10 #60
-UNSUPERVISED_PAGES = 20 #120
+UNSUPERVISED_PAGES = 50 #120
 UNSUP_LOSS_WEIGHT = 1.0
 TILE_SIZE_WH = (512, 256)
-BATCH_SIZE = 16
+BATCH_SIZE = 10
 MAX_EPOCHS = 100
 EARLY_STOPPING_PATIENCE = 10
 NOISE_DROPOUT = 0.25
@@ -73,8 +73,11 @@ class Ex_KnowledgeTransfer(Experiment):
 
     def _symbol_name_to_segdesc(self, symbol: str) -> SegmentationDescription:
         # TODO: move this symbol naming into the segmentation description class
-        assert symbol == "noteheads"
-        return SegmentationDescription.NOTEHEADS
+        if symbol == "noteheads":
+            return SegmentationDescription.NOTEHEADS
+        if symbol == "staffline":
+            return SegmentationDescription.STAFFLINE
+        raise Exception("Unknown symbol name: " + symbol)
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)
@@ -111,7 +114,8 @@ class Ex_KnowledgeTransfer(Experiment):
                     unsupervised_pages=UNSUPERVISED_PAGES,
                     batch_size=BATCH_SIZE,
                     segdesc=self._symbol_name_to_segdesc(opts.symbol),
-                    unsupervised_transformation=noise.dataset_transformation
+                    unsupervised_transformation=noise.dataset_transformation,
+                    output_scale_factor=0.25 # trying out, what it does to reconstruction performance
                 )
 
             ds_train = feeder(ds_train)
@@ -127,7 +131,7 @@ class Ex_KnowledgeTransfer(Experiment):
                 ds_train=ds_train,
                 ds_validate=ds_validate,
                 save_checkpoints=False,
-                early_stop_after=EARLY_STOPPING_PATIENCE
+                #early_stop_after=EARLY_STOPPING_PATIENCE # TODO: debug disabled
             )
             model.perform_evaluation(ds_test)
 

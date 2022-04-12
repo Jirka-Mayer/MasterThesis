@@ -78,6 +78,13 @@ SegmentationDescription.STEM = SegmentationDescription() \
         oversample=True
     )
 
+SegmentationDescription.STAFFLINE = SegmentationDescription() \
+    .add_channel("staffLine",
+        mung_classes=["staffLine"],
+        deepscores_classes=["staff"],
+        oversample=True
+    )
+
 SegmentationDescription.BEAM = SegmentationDescription() \
     .add_channel("beam",
         mung_classes=["beam"],

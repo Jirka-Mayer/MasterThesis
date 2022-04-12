@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
 from .transform_sample_tiles import transform_sample_tiles
 from .deepscores.DeepScores import DeepScores
 from .muscima.Muscima import Muscima
@@ -29,6 +29,8 @@ class TransferDataset:
         batch_size: int,
         segdesc: SegmentationDescription,
         unsupervised_transformation: Callable[[tf.data.Dataset], tf.data.Dataset],
+        output_scale_factor: Optional[float] = None,
+        output_scale_method = tf.image.ResizeMethod.AREA,
     ):
         meta_train = DsMetadata.from_train_set()
         deepscores_scaleup_factor = Muscima.DPSS / DeepScores.DPSS
@@ -117,39 +119,15 @@ class TransferDataset:
         ))
         ds_test = ds_test.batch(1)
 
+        # output scaling
+        ds_train = ds_train.apply(
+            transform_resize_images(output_scale_factor, output_scale_method)
+        )
+        ds_validate = ds_validate.apply(
+            transform_resize_images(output_scale_factor, output_scale_method)
+        )
+        ds_test = ds_test.apply(
+            transform_resize_images(output_scale_factor, output_scale_method)
+        )
+
         return ds_train, ds_validate, ds_test
-
-
-
-
-
-        print("loading ds meta")
-        meta_train = DsMetadata.from_train_set()
-        print(len(meta_train.ds["images"]))
-
-        deepscores_scaleup_factor = Muscima.DPSS / DeepScores.DPSS
-        # TODO: shuffle pages before splitting them
-
-        ds = tf.data.Dataset.range(meta_train.page_count())
-        ds = ds.shuffle(buffer_size=1000, seed=seed, reshuffle_each_iteration=False)
-        
-        dso = ds
-        ds = transform_ds_pages_to_images(meta_train)(ds)
-        ds = transform_resize_images(deepscores_scaleup_factor, tf.image.ResizeMethod.BILINEAR)(ds)
-        
-        tcds = transform_ds_pages_to_tile_counts(meta_train, tile_size_wh, deepscores_scaleup_factor)(dso)
-
-        ds = transform_sample_tiles(seed, tile_size_wh, tcds, segdesc.oversampled_channel_indices())(ds)
-
-        # ds = transform_ds_pages_to_masks(meta_train, segdesc)(ds)
-        # ds = transform_resize_images(deepscores_scaleup_factor, tf.image.ResizeMethod.BILINEAR)(ds)
-
-        print(len(ds))
-        import matplotlib.pyplot as plt
-        for x in ds.as_numpy_iterator():
-            plt.imshow(x)
-            plt.show()
-
-        # scale deepscores up to muscima DPSS
-
-        # return TRAIN (ds), VALIDATE (ds), TEST (mpp)

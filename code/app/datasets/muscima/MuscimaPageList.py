@@ -85,14 +85,14 @@ class MuscimaPageList:
         """
         assert sup_ratio + unsup_ratio <= 1.0
 
-        validation_pages, train_pages = self.split(
+        validation_pages, remaining_pages = self.split(
             ratio=validation_ratio, seed=seed
         )
-        used_pages, _ = train_pages.split(
-            ratio=sup_ratio + unsup_ratio, seed=seed
+        sup_pages, remaining_pages = remaining_pages.split(
+            ratio=sup_ratio, seed=seed
         )
-        sup_pages, unsup_pages = used_pages.split(
-            ratio=sup_ratio / (sup_ratio + unsup_ratio), seed=seed
+        unsup_pages, _ = remaining_pages.split(
+            ratio=unsup_ratio / (1 - sup_ratio), seed=seed
         )
 
         return validation_pages, sup_pages, unsup_pages

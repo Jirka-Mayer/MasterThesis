@@ -23,7 +23,7 @@ class Muscima:
 
     @staticmethod
     def semisupervised_experiment_datasets(
-        seed: int,
+        dataset_seed: int,
         validation_ratio: float,
         sup_ratio: float,
         unsup_ratio: float,
@@ -43,13 +43,18 @@ class Muscima:
                     validation_ratio=validation_ratio,
                     sup_ratio=sup_ratio,
                     unsup_ratio=unsup_ratio,
-                    seed=seed
+                    seed=dataset_seed
                 )
         
         test_pages = MuscimaPageList.get_independent_test_set()
 
         # training dataset
         sup_pages_ds = sup_pages.as_tf_dataset()
+        sup_pages_ds = sup_pages_ds.shuffle(
+            buffer_size=len(sup_pages_ds),
+            seed=dataset_seed,
+            reshuffle_each_iteration=False
+        )
         ds_sup = tf.data.Dataset.zip(datasets=(
             sup_pages_ds.apply(transform_mc_pages_to_images()),
             sup_pages_ds.apply(transform_mc_pages_to_masks(segdesc))
@@ -58,7 +63,7 @@ class Muscima:
             transform_resize_images(input_scale_factor, input_scale_method)
         )
         ds_sup = ds_sup.apply(transform_sample_tiles(
-            seed=seed,
+            seed=dataset_seed,
             tile_size_wh=tile_size_wh,
             tile_count_ds=sup_pages_ds.apply(
                 transform_mc_pages_to_tile_counts(tile_size_wh)
@@ -66,19 +71,24 @@ class Muscima:
             oversample_channels=segdesc.oversampled_channel_indices()
         ))
         ds_sup = ds_sup.shuffle(
-            buffer_size=1000,
-            seed=seed,
+            buffer_size=500,
+            seed=dataset_seed,
             reshuffle_each_iteration=False
         )
 
         unsup_pages_ds = unsup_pages.as_tf_dataset()
+        unsup_pages_ds = unsup_pages_ds.shuffle(
+            buffer_size=len(unsup_pages_ds),
+            seed=dataset_seed,
+            reshuffle_each_iteration=False
+        )
         ds_unsup = unsup_pages_ds.apply(transform_mc_pages_to_images())
         ds_unsup = ds_unsup.apply(
             transform_resize_images(input_scale_factor, input_scale_method)
         )
         ds_unsup = ds_unsup.apply(unsupervised_transformation)
         ds_unsup = ds_unsup.apply(transform_sample_tiles(
-            seed=seed,
+            seed=dataset_seed,
             tile_size_wh=tile_size_wh,
             tile_count_ds=unsup_pages_ds.apply(
                 transform_mc_pages_to_tile_counts(tile_size_wh)
@@ -86,8 +96,8 @@ class Muscima:
             oversample_channels=[]
         ))
         ds_unsup = ds_unsup.shuffle(
-            buffer_size=1000,
-            seed=seed,
+            buffer_size=500,
+            seed=dataset_seed,
             reshuffle_each_iteration=False
         )
 

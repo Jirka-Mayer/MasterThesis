@@ -104,7 +104,7 @@ class Ex01_SemisupUnet(Experiment):
         with DatasetFeeder(self.experiment_directory("cache")) as feeder:
             ds_train, ds_validate, ds_test = \
                 Muscima.semisupervised_experiment_datasets(
-                    seed=opts.seed,
+                    dataset_seed=opts.seed,
                     validation_ratio=opts.validation_ratio,
                     sup_ratio=opts.sup_ratio,
                     unsup_ratio=opts.unsup_ratio,

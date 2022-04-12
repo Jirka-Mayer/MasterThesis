@@ -37,6 +37,7 @@ NOISE_SEARCH__UNSUP_LOSS_WEIGHT = 0.1
 class Options:
     def __init__(self, force=False, dry_run=False, **kwargs):
         self.seed = int(kwargs["seed"])
+        self.dataset_seed = int(kwargs["dataset_seed"])
         self.sup_ratio = float(kwargs["sup_ratio"])
         self.unsup_ratio = float(kwargs["unsup_ratio"])
         self.unsup_loss_weight = float(kwargs["unsup_loss_weight"])
@@ -67,6 +68,7 @@ class Ex_HyperparamSearch(Experiment):
             help="One of: search-supervision, search-noise, gather, plot, remove-locks"
         )
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
+        parser.add_argument("--dataset_seed", default=42, type=int, help="Random seed for dataset slicing.")
         parser.add_argument("--force", default=False, action="store_true",
             help="Forces search for already computed data points.")
         parser.add_argument("--dry_run", default=False, action="store_true",
@@ -85,10 +87,11 @@ class Ex_HyperparamSearch(Experiment):
             self.remove_locks()
     
     def search_supervision(self, args: argparse.Namespace):
-        for unsup_ratio in reversed([0.0, 0.05, 0.1, 0.2, 0.3, 0.5]):
-            for unsup_loss_weight in [10, 1, 0.1, 0.01]:
+        for unsup_ratio in reversed([0.0, 0.05, 0.1, 0.3, 0.5]):
+            for unsup_loss_weight in [10, 3, 1, 0.3, 0.1]:
                 self.compute_single_instance(Options(
                     seed=args.seed,
+                    dataset_seed=args.dataset_seed,
                     sup_ratio=SUP_SEARCH__SUP_RATIO,
                     unsup_ratio=unsup_ratio,
                     unsup_loss_weight=unsup_loss_weight,
@@ -300,7 +303,8 @@ class Ex_HyperparamSearch(Experiment):
         noise = NoiseGenerator(
             seed=opts.seed,
             max_noise_size=opts.max_noise_size,
-            dropout_ratio=opts.noise_dropout
+            dropout_ratio=opts.noise_dropout,
+            largest_tiles_only=True
         )
 
         cache_dir = self.experiment_directory(
@@ -310,7 +314,7 @@ class Ex_HyperparamSearch(Experiment):
         with DatasetFeeder(cache_dir, opts.dry_run) as feeder:
             ds_train, ds_validate, ds_test = \
                 Muscima.semisupervised_experiment_datasets(
-                    seed=opts.seed,
+                    dataset_seed=opts.dataset_seed,
                     validation_ratio=VALIDATION_RATIO,
                     sup_ratio=opts.sup_ratio,
                     unsup_ratio=opts.unsup_ratio,
@@ -352,7 +356,7 @@ class Ex_HyperparamSearch(Experiment):
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
         take_vars = [
-            "seed",
+            "seed", "dataset_seed",
             "sup_ratio", "unsup_ratio", "unsup_loss_weight",
             "noise_dropout", "max_noise_size"
         ]

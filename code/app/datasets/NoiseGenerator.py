@@ -5,13 +5,20 @@ import math
 
 
 class NoiseGenerator:
-    def __init__(self, seed: int, max_noise_size: int, dropout_ratio: float):
+    def __init__(
+        self,
+        seed: int,
+        max_noise_size: int,
+        dropout_ratio: float,
+        largest_tiles_only=False
+    ):
         self._rnd = random.Random(seed)
         self._nprnd = np.random.RandomState(seed)
         self._max_noise_size = max_noise_size
         self._scales = []
         self._calculate_scales()
         self._dropout_ratio = dropout_ratio
+        self._largest_tiles_only = largest_tiles_only
 
     def _calculate_scales(self):
         self._scales = []
@@ -79,7 +86,11 @@ class NoiseGenerator:
         width: int
     ):
         """Creates a noise mask with random scale"""
-        scale = self._rnd.choice(self._scales)
+        if self._largest_tiles_only:
+            scale = self._scales[0]
+        else:
+            scale = self._rnd.choice(self._scales)
+
         return self._create_noise_mask(height, width, scale, self._dropout_ratio), scale
 
     def _create_noisy_image(self, image: np.ndarray) -> np.ndarray:

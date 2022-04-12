@@ -18,10 +18,9 @@ from ..datasets.TransferDataset import TransferDataset
 
 
 VALIDATION_PAGES = 10
-SUPERVISED_PAGES = 60
-UNSUPERVISED_PAGES = 120
-UNSUP_LOSS_WEIGHT = 0.1
-SEGDESC = SegmentationDescription.NOTEHEADS
+SUPERVISED_PAGES = 10 #60
+UNSUPERVISED_PAGES = 20 #120
+UNSUP_LOSS_WEIGHT = 1.0
 TILE_SIZE_WH = (512, 256)
 BATCH_SIZE = 16
 MAX_EPOCHS = 100
@@ -33,6 +32,7 @@ NOISE_SIZE = int(Muscima.DPSS * 2)
 class Options:
     def __init__(self, **kwargs):
         self.seed = int(kwargs["seed"])
+        self.symbol = str(kwargs["symbol"])
 
 
 class Ex_KnowledgeTransfer(Experiment):
@@ -51,6 +51,7 @@ class Ex_KnowledgeTransfer(Experiment):
             help="One of: train"
         )
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
+        parser.add_argument("--symbol", default="noteheads", type=str, help="Symbol to train on.")
         parser.add_argument("--epochs", default=MAX_EPOCHS, type=int, help="Overwrites max epochs.")
 
     def run(self, args: argparse.Namespace):
@@ -62,8 +63,14 @@ class Ex_KnowledgeTransfer(Experiment):
     
     def train(self, args: argparse.Namespace):
         self.compute_single_instance(Options(
-            seed=args.seed
+            seed=args.seed,
+            symbol=args.symbol
         ))
+
+    def _symbol_name_to_segdesc(self, symbol: str) -> SegmentationDescription:
+        # TODO: move this symbol naming into the segmentation description class
+        assert symbol == "noteheads"
+        return SegmentationDescription.NOTEHEADS
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)
@@ -82,7 +89,8 @@ class Ex_KnowledgeTransfer(Experiment):
         noise = NoiseGenerator(
             seed=opts.seed,
             max_noise_size=NOISE_SIZE,
-            dropout_ratio=NOISE_DROPOUT
+            dropout_ratio=NOISE_DROPOUT,
+            largest_tiles_only=True
         )
 
         cache_dir = self.experiment_directory(
@@ -98,7 +106,7 @@ class Ex_KnowledgeTransfer(Experiment):
                     supervised_pages=SUPERVISED_PAGES,
                     unsupervised_pages=UNSUPERVISED_PAGES,
                     batch_size=BATCH_SIZE,
-                    segdesc=SEGDESC,
+                    segdesc=self._symbol_name_to_segdesc(opts.symbol),
                     unsupervised_transformation=noise.dataset_transformation
                 )
 
@@ -122,7 +130,7 @@ class Ex_KnowledgeTransfer(Experiment):
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
         take_vars = [
-            "seed" # ???
+            "seed", "symbol"
         ]
         opt_vars = vars(opts)
         vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]

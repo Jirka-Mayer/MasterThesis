@@ -209,8 +209,16 @@ class Ex_HyperparamSearch(Experiment):
         y = [getattr(o, y_name) for o in filtered_options]
         z = [values[self.build_model_name(o)] for o in filtered_options]
 
-        if log_x: x = [math.log10(item) for item in x] ; x_name += " (log10(x))"
-        if log_y: y = [math.log10(item) for item in y] ; y_name += " (log10(y))"
+        if log_x:
+            x = [(math.log10(item) if item > 0 else None) for item in x]
+            x_name += " (log10(x))"
+        if log_y:
+            y = [(math.log10(item) if item > 0 else None) for item in y]
+            y_name += " (log10(y))"
+
+        # filter out None-containing points
+        x, y, z = zip(*[triple for triple in zip(x, y, z)
+        if triple[0] is not None and triple[1] is not None and triple[2] is not None])
 
         # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
         import matplotlib.pyplot as plt

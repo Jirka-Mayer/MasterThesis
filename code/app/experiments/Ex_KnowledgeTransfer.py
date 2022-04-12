@@ -77,6 +77,12 @@ class Ex_KnowledgeTransfer(Experiment):
             return SegmentationDescription.NOTEHEADS
         if symbol == "staffline":
             return SegmentationDescription.STAFFLINE
+        if symbol == "stem":
+            return SegmentationDescription.STEM
+        if symbol == "beam":
+            return SegmentationDescription.BEAM
+        if symbol == "flags":
+            return SegmentationDescription.FLAGS
         raise Exception("Unknown symbol name: " + symbol)
 
     def compute_single_instance(self, opts: Options) -> float:

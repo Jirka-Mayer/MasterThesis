@@ -33,7 +33,7 @@ class Options:
     def __init__(self, **kwargs):
         self.seed = int(kwargs["seed"])
         self.symbol = str(kwargs["symbol"])
-        self.unsupervised_loss_weigth = float(kwargs["unsupervised_loss_weigth"])
+        self.unsupervised_loss_weight = float(kwargs["unsupervised_loss_weight"])
 
 
 class Ex_KnowledgeTransfer(Experiment):
@@ -54,12 +54,12 @@ class Ex_KnowledgeTransfer(Experiment):
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
         parser.add_argument("--symbol", default="noteheads", type=str, help="Symbol to train on.")
         parser.add_argument("--epochs", default=MAX_EPOCHS, type=int, help="Overwrites max epochs.")
-        parser.add_argument("--unsupervised_loss_weigth", default=UNSUP_LOSS_WEIGHT, type=float, help="Unsup loss weight.")
+        parser.add_argument("--unsupervised_loss_weight", default=UNSUP_LOSS_WEIGHT, type=float, help="Unsup loss weight.")
 
     def run(self, args: argparse.Namespace):
         global MAX_EPOCHS, UNSUP_LOSS_WEIGHT
         MAX_EPOCHS = args.epochs
-        UNSUP_LOSS_WEIGHT = args.unsupervised_loss_weigth
+        UNSUP_LOSS_WEIGHT = args.unsupervised_loss_weight
 
         if args.command == "train":
             self.train(args)
@@ -68,7 +68,7 @@ class Ex_KnowledgeTransfer(Experiment):
         self.compute_single_instance(Options(
             seed=args.seed,
             symbol=args.symbol,
-            unsupervised_loss_weigth=args.unsupervised_loss_weigth
+            unsupervised_loss_weight=args.unsupervised_loss_weight
         ))
 
     def _symbol_name_to_segdesc(self, symbol: str) -> SegmentationDescription:
@@ -120,7 +120,7 @@ class Ex_KnowledgeTransfer(Experiment):
 
             model = DenoisingUnetModel.load_or_create(
                 model_directory,
-                unsup_loss_weight=opts.unsupervised_loss_weigth
+                unsup_loss_weight=opts.unsupervised_loss_weight
             )
             model.perform_training(
                 epochs=MAX_EPOCHS,
@@ -134,7 +134,7 @@ class Ex_KnowledgeTransfer(Experiment):
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
         take_vars = [
-            "seed", "symbol", "unsupervised_loss_weigth"
+            "seed", "symbol", "unsupervised_loss_weight"
         ]
         opt_vars = vars(opts)
         vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]

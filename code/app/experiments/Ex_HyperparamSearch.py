@@ -152,12 +152,13 @@ class Ex_HyperparamSearch(Experiment):
 
         print()
         print("# Supervision search results #")
-        print("# For seed:", args.seed)
+        print("# For seed:", args.seed, "and ds seed.", args.dataset_seed)
 
         self.plot_2d_slice(
             "unsup_loss_weight", "unsup_ratio",
             Options(
                 seed=args.seed,
+                dataset_seed=args.dataset_seed,
                 sup_ratio=SUP_SEARCH__SUP_RATIO,
                 unsup_ratio=0, # will be ignored
                 unsup_loss_weight=0, # will be ignored
@@ -171,12 +172,13 @@ class Ex_HyperparamSearch(Experiment):
 
         print()
         print("# Noise search results #")
-        print("# For seed:", args.seed)
+        print("# For seed:", args.seed, "and ds seed.", args.dataset_seed)
 
         self.plot_2d_slice(
             "noise_dropout", "max_noise_size",
             Options(
                 seed=args.seed,
+                dataset_seed=args.dataset_seed,
                 sup_ratio=NOISE_SEARCH__SUP_RATIO,
                 unsup_ratio=NOISE_SEARCH__UNSUP_RATIO,
                 unsup_loss_weight=NOISE_SEARCH__UNSUP_LOSS_WEIGHT,
@@ -220,8 +222,9 @@ class Ex_HyperparamSearch(Experiment):
             y_name += " (log10(y))"
 
         # filter out None-containing points
-        x, y, z = zip(*[triple for triple in zip(x, y, z)
-        if triple[0] is not None and triple[1] is not None and triple[2] is not None])
+        if len(x) > 0:
+            x, y, z = zip(*[triple for triple in zip(x, y, z)
+            if triple[0] is not None and triple[1] is not None and triple[2] is not None])
 
         # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
         import matplotlib.pyplot as plt

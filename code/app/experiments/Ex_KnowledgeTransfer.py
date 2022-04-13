@@ -153,7 +153,7 @@ class Ex_KnowledgeTransfer(Experiment):
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
         take_vars = [
-            "datset_seed", "seed", "val_pages", "sup_pages", "unsup_pages",
+            "dataset_seed", "seed", "val_pages", "sup_pages", "unsup_pages",
             "symbol", "unsupervised_loss_weight"
         ]
         opt_vars = vars(opts)

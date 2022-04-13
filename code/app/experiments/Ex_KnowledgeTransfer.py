@@ -17,10 +17,6 @@ from ..datasets.SegmentationDescription import SegmentationDescription
 from ..datasets.TransferDataset import TransferDataset
 
 
-VALIDATION_PAGES = 10
-SUPERVISED_PAGES = 10 #60
-UNSUPERVISED_PAGES = 50 #120
-UNSUP_LOSS_WEIGHT = 1.0
 TILE_SIZE_WH = (512, 256)
 BATCH_SIZE = 10
 MAX_EPOCHS = 100
@@ -32,8 +28,13 @@ NOISE_SIZE = int(Muscima.DPSS * 2)
 class Options:
     def __init__(self, **kwargs):
         self.seed = int(kwargs["seed"])
+        self.dataset_seed = int(kwargs["dataset_seed"])
         self.symbol = str(kwargs["symbol"])
         self.unsupervised_loss_weight = float(kwargs["unsupervised_loss_weight"])
+
+        self.val_pages = int(kwargs["val_pages"])
+        self.sup_pages = int(kwargs["sup_pages"])
+        self.unsup_pages = int(kwargs["unsup_pages"])
 
 
 class Ex_KnowledgeTransfer(Experiment):
@@ -54,12 +55,16 @@ class Ex_KnowledgeTransfer(Experiment):
         parser.add_argument("--seed", default=42, type=int, help="Random seed.")
         parser.add_argument("--symbol", default="noteheads", type=str, help="Symbol to train on.")
         parser.add_argument("--epochs", default=MAX_EPOCHS, type=int, help="Overwrites max epochs.")
-        parser.add_argument("--unsupervised_loss_weight", default=UNSUP_LOSS_WEIGHT, type=float, help="Unsup loss weight.")
+        parser.add_argument("--unsupervised_loss_weight", default=1.0, type=float, help="Unsup loss weight.")
+
+        parser.add_argument("--dataset_seed", default=42, type=int, help="Dataset-slicing random seed.")
+        parser.add_argument("--val_pages", default=10, type=int, help="Validation page count.")
+        parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
+        parser.add_argument("--unsup_pages", default=50, type=int, help="Unsupervised page count.")
 
     def run(self, args: argparse.Namespace):
-        global MAX_EPOCHS, UNSUP_LOSS_WEIGHT
+        global MAX_EPOCHS
         MAX_EPOCHS = args.epochs
-        UNSUP_LOSS_WEIGHT = args.unsupervised_loss_weight
 
         if args.command == "train":
             self.train(args)
@@ -68,7 +73,11 @@ class Ex_KnowledgeTransfer(Experiment):
         self.compute_single_instance(Options(
             seed=args.seed,
             symbol=args.symbol,
-            unsupervised_loss_weight=args.unsupervised_loss_weight
+            unsupervised_loss_weight=args.unsupervised_loss_weight,
+            dataset_seed=args.dataset_seed,
+            val_pages=args.val_pages,
+            sup_pages=args.sup_pages,
+            unsup_pages=args.unsup_pages,
         ))
 
     def _symbol_name_to_segdesc(self, symbol: str) -> SegmentationDescription:
@@ -113,11 +122,11 @@ class Ex_KnowledgeTransfer(Experiment):
         with DatasetFeeder(cache_dir) as feeder:
             ds_train, ds_validate, ds_test = \
                 TransferDataset.deepscores_to_muscima(
-                    seed=opts.seed,
+                    dataset_seed=opts.dataset_seed,
                     tile_size_wh=TILE_SIZE_WH,
-                    validation_pages=VALIDATION_PAGES,
-                    supervised_pages=SUPERVISED_PAGES,
-                    unsupervised_pages=UNSUPERVISED_PAGES,
+                    validation_pages=opts.val_pages,
+                    supervised_pages=opts.sup_pages,
+                    unsupervised_pages=opts.unsup_pages,
                     batch_size=BATCH_SIZE,
                     segdesc=self._symbol_name_to_segdesc(opts.symbol),
                     unsupervised_transformation=noise.dataset_transformation,
@@ -144,7 +153,8 @@ class Ex_KnowledgeTransfer(Experiment):
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
         take_vars = [
-            "seed", "symbol", "unsupervised_loss_weight"
+            "datset_seed", "seed", "val_pages", "sup_pages", "unsup_pages",
+            "symbol", "unsupervised_loss_weight"
         ]
         opt_vars = vars(opts)
         vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]

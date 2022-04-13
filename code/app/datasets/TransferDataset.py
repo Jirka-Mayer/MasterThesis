@@ -103,8 +103,8 @@ class TransferDataset:
 
         # validation dataset
         ds_validate = tf.data.Dataset.zip(datasets=(
-            validation_pages_ds.apply(transform_mc_pages_to_images(meta_train)),
-            validation_pages_ds.apply(transform_mc_pages_to_masks(meta_train, segdesc))
+            validation_pages_ds.apply(transform_mc_pages_to_images()),
+            validation_pages_ds.apply(transform_mc_pages_to_masks(segdesc))
         ))
         ds_validate = ds_validate.batch(1)
 

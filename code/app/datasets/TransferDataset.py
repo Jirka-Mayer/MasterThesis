@@ -14,6 +14,7 @@ from .deepscores.transform_ds_pages_to_masks import transform_ds_pages_to_masks
 from .deepscores.transform_ds_pages_to_tile_counts import transform_ds_pages_to_tile_counts
 from .transform_resize_images import transform_resize_images
 from .create_semisup_dataset import create_semisup_dataset
+from .transform_shuffle import transform_shuffle
 
 
 class TransferDataset:
@@ -37,22 +38,14 @@ class TransferDataset:
 
         # setup ds pages datasets
         all_ds_pages_ds = tf.data.Dataset.range(meta_train.page_count())
-        all_ds_page_count = len(all_ds_pages_ds)
-        all_ds_pages_ds = all_ds_pages_ds.shuffle(
-            buffer_size=all_ds_page_count,
-            seed=dataset_seed,
-            reshuffle_each_iteration=False
-        )
+        all_ds_pages_ds = all_ds_pages_ds.apply(transform_shuffle(dataset_seed))
 
         sup_pages_ds = all_ds_pages_ds.take(supervised_pages)
 
         # setup muscima pages datasets
         mc_train_pages_ds = MuscimaPageList.get_independent_train_set().as_tf_dataset()
-        mc_train_pages_ds = mc_train_pages_ds.shuffle(
-            buffer_size=len(mc_train_pages_ds),
-            seed=dataset_seed,
-            reshuffle_each_iteration=False
-        )
+        mc_train_pages_ds = mc_train_pages_ds.apply(transform_shuffle(dataset_seed))
+        
         assert validation_pages + unsupervised_pages <= len(mc_train_pages_ds)
         validation_pages_ds = mc_train_pages_ds.take(validation_pages)
         unsup_pages_ds = mc_train_pages_ds.skip(validation_pages).take(unsupervised_pages)

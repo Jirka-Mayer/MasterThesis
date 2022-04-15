@@ -1,8 +1,5 @@
 import random
-from numpy import dtype
 import tensorflow as tf
-import numpy as np
-from typing import Dict, List, Tuple
 
 
 def transform_shuffle(seed: int):
@@ -13,17 +10,8 @@ def transform_shuffle(seed: int):
     rnd = random.Random(seed)
 
     def _the_transformation(input_ds):
-        def _the_generator():
-            items = [i for i in input_ds.as_numpy_iterator()]
-            rnd.shuffle(items)
-            for i in items:
-                yield i
-
-        ds = tf.data.Dataset.from_generator(
-            _the_generator,
-            output_signature=input_ds.element_spec
-        )
-        ds = ds.repeat().take(len(input_ds)) # trick to set dataset length
-        return ds
+        items = [i for i in input_ds]
+        rnd.shuffle(items)
+        return tf.data.Dataset.from_tensor_slices(items)
     
     return _the_transformation

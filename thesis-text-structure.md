@@ -45,6 +45,7 @@ Chapters of the thesis and their content:
     - https://arxiv.org/pdf/1804.00525.pdf
     - v2: https://ieeexplore.ieee.org/document/9412290/
 - solving resolution problems
+- solving stability when increasing unsupervised ratio (fixing sup split, growing unsup split)
 
 ### Noise Generation
 

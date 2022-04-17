@@ -6,10 +6,13 @@ from .SegmentationColors import SegmentationColors
 
 
 class DsMetadata:
-    def __init__(self, json_path: str):
+    def __init__(self, json_path: str, verbose=False):
+        if verbose:
+            print("Loading '{}' ...".format(json_path))
+
         with open(json_path, "r") as f:
             ds = json.load(f)
-
+            
         self._categories = ds["categories"]
         self._image_sizes_wh = [
             (img["width"], img["height"]) for img in ds["images"]
@@ -20,13 +23,16 @@ class DsMetadata:
 
         del ds # free up memory
 
-    @staticmethod
-    def from_test_set():
-        return DsMetadata(DEEPSCORES_TEST_ANNOTATIONS)
+        if verbose:
+            print("Done.")
 
     @staticmethod
-    def from_train_set():
-        return DsMetadata(DEEPSCORES_TRAIN_ANNOTATIONS)
+    def from_test_set(verbose=False):
+        return DsMetadata(DEEPSCORES_TEST_ANNOTATIONS, verbose)
+
+    @staticmethod
+    def from_train_set(verbose=False):
+        return DsMetadata(DEEPSCORES_TRAIN_ANNOTATIONS, verbose)
 
     def page_index_to_image_path(self, page_index: int):
         filename = self._image_filenames[page_index]

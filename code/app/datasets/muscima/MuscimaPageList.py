@@ -1,4 +1,5 @@
-from typing import Tuple, Sequence, TypeVar
+from tkinter import W
+from typing import List, Tuple, Sequence, TypeVar
 import pathlib
 import random
 import tensorflow as tf
@@ -16,7 +17,7 @@ class MuscimaPageList:
     Self = TypeVar("Self", bound="MuscimaPageList")
 
     def __init__(self, instances: Sequence[MuscimaPage]):
-        self.instances = list(sorted(instances))
+        self.instances = list(instances)
 
     def __iter__(self):
         return iter(self.instances)
@@ -29,31 +30,72 @@ class MuscimaPageList:
 
     @staticmethod
     def get_muscimapp_all() -> Self:
-        return MuscimaPageList([
+        return MuscimaPageList(sorted([
             MuscimaPage.from_xml_filename(x) for x in
             os.listdir(MUSCIMAPP_ANNOTATIONS) if x.endswith(".xml")
-        ])
+        ]))
 
     @staticmethod
     def get_independent_test_set() -> Self:
-        return MuscimaPageList([
+        return MuscimaPageList(sorted([
             MuscimaPage.from_xml_filename(x + ".xml") for x in
             pathlib.Path(MUSCIMAPP_TESTSET_INDEP) \
                 .read_text() \
                 .splitlines(keepends=False)
-        ])
+        ]))
 
     @staticmethod
     def get_independent_train_set() -> Self:
         all = set(MuscimaPageList.get_muscimapp_all())
         test = set(MuscimaPageList.get_independent_test_set())
         train = all - test
-        return MuscimaPageList(train)
+        return MuscimaPageList(sorted(train))
+
+    @staticmethod
+    def get_entire_cvc_muscima() -> Self:
+        return MuscimaPageList(sorted([
+            MuscimaPage(w, p) for w in range(1, 51) for p in range(1, 21)
+        ]))
 
     def filter_writers(self, writers: Sequence[int]) -> Self:
         return MuscimaPageList(
             filter(lambda i: i.writer in writers, self.instances)
         )
+
+    def filter_out_writers(self, writers: Sequence[int]) -> Self:
+        return MuscimaPageList(
+            filter(lambda i: i.writer not in writers, self.instances)
+        )
+
+    def filter_out_pages(self, pages: Sequence[MuscimaPage]) -> Self:
+        return MuscimaPageList(
+            filter(lambda i: i not in pages, self.instances)
+        )
+
+    def get_writers(self) -> List[int]:
+        return list(set([x.writer for x in self.instances]))
+
+    def shuffle_writer_clusters(self, seed: int) -> Self:
+        writers = self.get_writers()
+
+        rnd = random.Random(seed)
+        rnd.shuffle(writers)
+
+        output = []
+        for w in writers:
+            for i in self.instances:
+                if i.writer == w:
+                    output.append(i)
+        return MuscimaPageList(output)
+
+    def shuffle_in_place(self, seed: int):
+        rnd = random.Random(seed)
+        rnd.shuffle(self.instances)
+
+    def take(self, count: int) -> Self:
+        return MuscimaPageList([
+            p for i, p in enumerate(self.instances) if i < count
+        ])
 
     def split(self, ratio=0.5, seed=None) -> Tuple[Self, Self]:
         """Split the list into two halves by writers"""

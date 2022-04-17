@@ -62,6 +62,8 @@ class Ex_KnowledgeTransfer(Experiment):
         parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
         parser.add_argument("--unsup_pages", default=50, type=int, help="Unsupervised page count.")
 
+        # TODO: add batch size
+
     def run(self, args: argparse.Namespace):
         global MAX_EPOCHS
         MAX_EPOCHS = args.epochs

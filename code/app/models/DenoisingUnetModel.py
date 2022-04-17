@@ -14,13 +14,14 @@ def _upsample(output_features, x):
     )(x)
 
 
-def _unet_level(depth, max_depth, inner_features, x):
+def _unet_level(depth, max_depth, inner_features, skip_weight, dropout, x):
     level_features = inner_features * (1 << depth)
     
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
         activation="relu", padding="same"
     )(x)
+    x = tf.keras.layers.Dropout(dropout)(x)
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
         activation="relu", padding="same"
@@ -32,7 +33,7 @@ def _unet_level(depth, max_depth, inner_features, x):
     skip_connection = x
     
     x = tf.keras.layers.MaxPool2D()(x)
-    x = _unet_level(depth + 1, max_depth, inner_features, x)
+    x = _unet_level(depth + 1, max_depth, inner_features, skip_weight, dropout, x)
     x = _upsample(output_features=level_features, x=x)
     
     # (sz // 2) * 2 is not equal to "sz" if "sz" is not even
@@ -44,13 +45,18 @@ def _unet_level(depth, max_depth, inner_features, x):
         target_height=tf.shape(skip_connection)[1],
         target_width=tf.shape(skip_connection)[2]
     )
+
+    # gate
+    skip_connection = skip_connection * skip_weight
     
-    x = tf.concat((skip_connection, x), axis=3)
+    # x = tf.concat((skip_connection, x), axis=3)
+    x = x + skip_connection # sum instead of concat
     
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
         activation="relu", padding="same"
     )(x)
+    x = tf.keras.layers.Dropout(dropout)(x)
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
         activation="relu", padding="same"
@@ -67,7 +73,9 @@ class DenoisingUnetModel(tf.keras.Model):
         denoised_channels: int = 1,
         inner_features: int = 8,
         depth: int = 3,
-        unsup_loss_weight: float = 1.0
+        unsup_loss_weight: float = 1.0,
+        dropout: float = 0.5,
+        skip_connection: str = "gated" # one of "none", "gated", "solid"
     ):
         super().__init__()
 
@@ -80,6 +88,10 @@ class DenoisingUnetModel(tf.keras.Model):
         self.inner_features = inner_features
         self.depth = depth
         self.unsup_loss_weight = unsup_loss_weight
+        self.dropout = dropout
+        self.skip_connection = skip_connection
+
+        assert self.skip_connection in ["none", "gated", "solid"]
 
         ### Define the UNet model ###
 
@@ -91,11 +103,19 @@ class DenoisingUnetModel(tf.keras.Model):
             name="unet_input"
         )
 
+        skip_weight_input = tf.keras.layers.Input(
+            shape=(),
+            name="skip_weight_input"
+        )
+        skip_weight = tf.squeeze(skip_weight_input, axis=0) # hack to get a scalar
+
         # unet body
         x = _unet_level(
             depth=0,
             max_depth=self.depth,
             inner_features=self.inner_features,
+            skip_weight=skip_weight,
+            dropout=dropout,
             x=unet_input
         )
 
@@ -111,14 +131,14 @@ class DenoisingUnetModel(tf.keras.Model):
 
         # define models
         self.segmentation_unet = tf.keras.Model(
-            inputs=unet_input,
+            inputs=[unet_input, skip_weight_input],
             outputs=unet_segmentation_output,
-            name="unet"
+            name="segmentation_unet"
         )
-        self.denoising_unet = tf.keras.Model(
-            inputs=unet_input,
+        self.reconstruction_unet = tf.keras.Model(
+            inputs=[unet_input, skip_weight_input],
             outputs=unet_denoised_output,
-            name="unet"
+            name="reconstruction_unet"
         )
 
     def get_config(self):
@@ -129,7 +149,9 @@ class DenoisingUnetModel(tf.keras.Model):
             "denoised_channels": self.denoised_channels,
             "inner_features": self.inner_features,
             "depth": self.depth,
-            "unsup_loss_weight": self.unsup_loss_weight
+            "unsup_loss_weight": self.unsup_loss_weight,
+            "dropout": self.dropout,
+            "skip_connection": self.skip_connection
         }
 
     @classmethod
@@ -140,18 +162,36 @@ class DenoisingUnetModel(tf.keras.Model):
             denoised_channels=config["denoised_channels"],
             inner_features=config["inner_features"],
             depth=config["depth"],
-            unsup_loss_weight=config["unsup_loss_weight"]
+            unsup_loss_weight=config["unsup_loss_weight"],
+            dropout=config["dropout"],
+            skip_connection=config["skip_connection"]
         )
         model.finished_epochs = config["finished_epochs"]
         return model
 
     @tf.function
     def call(self, inputs, training=None):
-        return self.segmentation_unet(inputs, training=training)
+        if self.skip_connection in ["gated", "solid"]:
+            skip_weight = tf.ones(shape=(1,))
+        else:
+            skip_weight = tf.zeros(shape=(1,))
+
+        return self.segmentation_unet(
+            [inputs, skip_weight],
+            training=training
+        )
 
     @tf.function
-    def call_denoising(self, inputs, training=None):
-        return self.denoising_unet(inputs, training=training)
+    def call_reconstruct(self, inputs, training=None):
+        if self.skip_connection in ["solid"]:
+            skip_weight = tf.ones(shape=(1,))
+        else:
+            skip_weight = tf.zeros(shape=(1,))
+
+        return self.reconstruction_unet(
+            [inputs, skip_weight],
+            training=training
+        )
 
     @tf.function
     def train_step(self, batch):
@@ -159,8 +199,8 @@ class DenoisingUnetModel(tf.keras.Model):
         (sup_x, unsup_x), (sup_y_true, unsup_y_true) = batch
 
         with tf.GradientTape() as tape:
-            sup_y_pred = self.segmentation_unet(sup_x, training=True)
-            unsup_y_pred = self.denoising_unet(unsup_x, training=True)
+            sup_y_pred = self.call(sup_x, training=True)
+            unsup_y_pred = self.call_reconstruct(unsup_x, training=True)
             
             seg_loss = self.compiled_loss(
                 y_true=sup_y_true,
@@ -256,8 +296,9 @@ class DenoisingUnetModel(tf.keras.Model):
             callbacks.append(
                 tf.keras.callbacks.ModelCheckpoint(
                     filepath=self.model_directory.checkpoint_format_path,
-                    monitor="val_loss",
-                    verbose=1
+                    monitor="val_f1_score",
+                    verbose=1,
+                    save_best_only=True
                 ),
             )
 
@@ -267,13 +308,13 @@ class DenoisingUnetModel(tf.keras.Model):
             if record is not None:
                 if int(record["epoch"]) + 1 == self.finished_epochs:
                     print("Using early stopping baseline from the metrics file.")
-                    baseline = record["val_loss"]
+                    baseline = record["val_f1_score"]
             callbacks.append(
                 tf.keras.callbacks.EarlyStopping(
-                    monitor="val_loss",
+                    monitor="val_f1_score",
                     verbose=1,
                     patience=early_stop_after,
-                    mode="min",
+                    mode="max",
                     baseline=baseline
                 )
             )
@@ -318,7 +359,7 @@ class DenoisingUnetModel(tf.keras.Model):
             self.visualize_xy("sup", epoch, sup_x, sup_y_pred, sup_y_true)
 
         if unsup_x is not None:
-            unsup_y_pred = self.call_denoising(unsup_x, training=False)
+            unsup_y_pred = self.call_reconstruct(unsup_x, training=False)
             self.visualize_xy("unsup", epoch, unsup_x, unsup_y_pred, unsup_y_true)
 
     def visualize_xy(self, name, epoch, x, y_pred, y_true):

@@ -120,17 +120,30 @@ class Ex_KnowledgeTransfer(Experiment):
         )
 
         with DatasetFeeder(cache_dir) as feeder:
+            # ds_train, ds_validate, ds_test = \
+            #     TransferDataset.deepscores_to_muscima(
+            #         dataset_seed=opts.dataset_seed,
+            #         tile_size_wh=TILE_SIZE_WH,
+            #         validation_pages=opts.val_pages,
+            #         supervised_pages=opts.sup_pages,
+            #         unsupervised_pages=opts.unsup_pages,
+            #         batch_size=BATCH_SIZE,
+            #         segdesc=self._symbol_name_to_segdesc(opts.symbol),
+            #         unsupervised_transformation=noise.dataset_transformation,
+            #         #output_scale_factor=0.25 # trying out, what it does to reconstruction performance
+            #     )
+
             ds_train, ds_validate, ds_test = \
-                TransferDataset.deepscores_to_muscima(
+                Muscima.semisupervised_experiment_datasets(
                     dataset_seed=opts.dataset_seed,
-                    tile_size_wh=TILE_SIZE_WH,
-                    validation_pages=opts.val_pages,
-                    supervised_pages=opts.sup_pages,
-                    unsupervised_pages=opts.unsup_pages,
+                    validation_ratio=0.1,
+                    sup_ratio=opts.sup_pages / 100,
+                    unsup_ratio=opts.unsup_pages / 100,
                     batch_size=BATCH_SIZE,
                     segdesc=self._symbol_name_to_segdesc(opts.symbol),
+                    tile_size_wh=TILE_SIZE_WH,
                     unsupervised_transformation=noise.dataset_transformation,
-                    output_scale_factor=0.25 # trying out, what it does to reconstruction performance
+                    #output_scale_factor=0.25
                 )
 
             ds_train = feeder(ds_train)
@@ -139,7 +152,10 @@ class Ex_KnowledgeTransfer(Experiment):
 
             model = DenoisingUnetModel.load_or_create(
                 model_directory,
-                unsup_loss_weight=opts.unsupervised_loss_weight
+                unsup_loss_weight=opts.unsupervised_loss_weight,
+                inner_features=8,
+                dropout=0.5,
+                skip_connection="gated"
             )
             model.perform_training(
                 epochs=MAX_EPOCHS,

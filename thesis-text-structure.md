@@ -2,6 +2,22 @@ Chapters of the thesis and their content:
 
 ## Introduction
 
+- OMR is being advanced using deep learning
+- these models require training data, which is scarce
+- producing unlabeled data is much easier
+    - moreover CVC-MUSCIMA (1K pages) has only (140 pages) (14%) annotated as MPP
+- semi-supervised learning approaches attempt to use the unlabeled data
+    - and have been used in other fields
+- we want to explore semi-supervised learning -- how much can it help here?
+- music recognition has multiple stages, we will focus on object detection and recognition in the form of semantic segmentation
+    - work has been done in this domain, e.g. Hajič jr., U-Net archtiecture
+- there are many semi-supervised approaches, we chose to explore generative models
+    - generative models attempt to learn abstract representations that help with the classification task
+- we extended the U-Net architecture to make it SS compatible
+- we found that improvements can be achieved, however they are relatively minor and occur in only very specific circumstances
+    - this is probably because the model learns only low-level features (as seen in denoising visualizations); should it learn higher-level featuers, it could work better (GAN, etc..)
+- code is on github, link
+
 
 ## Related Work
 
@@ -50,6 +66,30 @@ Chapters of the thesis and their content:
 
 - object detection metrics overview:
     https://towardsdatascience.com/evaluating-performance-of-an-object-detection-model-137a349c517b
+
+
+------------------
+
+- semi-supervised improvements
+    - muscima-only improvement with low supervised count on noteheads
+        - vary sup/unsup pages and show improvements when
+            - symbols are not "too easy"
+            - there is very little supervised data
+                - the model wont even converge on it (due to dropout?)
+- understanding hyperparameters
+    - batch size
+        - too small -> bad
+    - dropout
+        - stabilizes training (makes it less jittery, model can be larger and wont overfit)
+    - skip connections (none / gated / permanent)
+        - ?
+    - unsupervised loss weight
+        - ?
+    - adding noise during reconstruction
+        - guess it does nothing, gated skipconns are more important?
+
+------------------
+
 
 ### Setting Hyperparameters
 
@@ -129,6 +169,18 @@ pixel-wise:
     transfer staffline removal learned supervised on deepscores and unsupervised on muscima and compare (can we learn staffline removal from printed music with unlabeled handwritten music?)
 
 ## Conclusion and Future Work
+
+- the improvement is minor and difficult to achieve
+- unsup data does provide regularization
+    - less noisy learning curve
+    - SS coverges, when fully supervised does not
+    - prevents overfitting (expand on what that means)
+
+From introduction:
+- we found that improvements can be achieved, however they are relatively minor and occur in only very specific circumstances
+    - this is probably because the model learns only low-level features (as seen in denoising visualizations); should it learn higher-level featuers, it could work better (GAN, etc..)
+        - show visualizations, desribe in detail
+        - describe GAN as a learned-loss function
 
 
 ## Bibliography

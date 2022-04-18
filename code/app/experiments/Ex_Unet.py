@@ -115,7 +115,10 @@ class Ex_Unet(Experiment):
     def search(self, args: argparse.Namespace):
         pass
         # validate semisupervised improvements on muscima++ only:
-        # --seed 0 --dataset_seed 0 --sup_pages 10 --unsup_pages 0/10/50
+        # plain test:
+        # --seed 0 --dataset_seed 0 --sup_pages 10 --sup_repeat 1 --unsup_pages 0/10/50
+        # small sup helps:
+        # --seed 0 --dataset_seed 0 --sup_pages 1 --sup_repeat 10 --unsup_pages 0/10/50
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)
@@ -166,33 +169,38 @@ class Ex_Unet(Experiment):
         # model -> load the best model checkpoint
         #model.perform_evaluation(ds_test)
 
+    OPTS_MAP = [
+        ("dataset", "ds"),
+        ("dataset_seed", "ds_seed"),
+        ("sup_pages", "sup"),
+        ("unsup_pages", "unsup"),
+        ("sup_repeat", "suprep"),
+        ("seed", "seed"),
+        ("symbol", "sym"),
+        ("epochs", "e"),
+        ("batch_size", "bs"),
+        ("val_pages", "val"),
+        ("noise_size_ss", "ns_sz"),
+        ("noise_dropout", "ns_dr"),
+        ("unsupervised_loss_weight", "l"),
+        ("inner_features", "ft"),
+        ("dropout", "dr"),
+        ("skip_connection", "skip"),
+    ]
+
     def build_model_name(self, opts: Options) -> str:
         # outputs: "experiment-name__foo=42_bar=baz"
-        take_vars = [
-            "dataset",
-            "dataset_seed",
-            "sup_pages",
-            "unsup_pages",
-            "sup_repeat",
-            "seed",
-            "symbol",
-            "epochs",
-            "batch_size",
-            "val_pages",
-            "noise_size_ss",
-            "noise_dropout",
-            "unsupervised_loss_weight",
-            "inner_features",
-            "dropout",
-            "skip_connection",
-        ]
         opt_vars = vars(opts)
-        vars_list = [v + "=" + str(opt_vars[v]) for v in take_vars]
+        vars_list = [b + "=" + str(opt_vars[a]) for a, b in self.OPTS_MAP]
         return "{}__{}".format(self.name, ",".join(vars_list))
 
     def parse_model_name(self, model_name: str) -> Options:
         items = model_name.split("__")[1].split(",")
-        kwargs = {
+        kwargs_parse = {
             item.split("=")[0]: item.split("=")[1] for item in items
         }
-        return Options(**kwargs)
+        kwargs_translated = {
+            [a for a, b in self.OPTS_MAP if b == k][0]: v
+            for k, v in kwargs_parse
+        }
+        return Options(**kwargs_translated)

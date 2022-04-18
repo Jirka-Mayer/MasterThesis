@@ -1,20 +1,8 @@
 import argparse
-import pickle
-import time
-from typing import Optional
-from numpy import math
-import tensorflow as tf
-import os
-import shutil
-
 from ..datasets.NoiseGenerator import NoiseGenerator
 from .Experiment import Experiment
-from ..models.DenoisingUnetModel import DenoisingUnetModel
-from ..models.ModelDirectory import ModelDirectory
-from ..datasets.DatasetFeeder import DatasetFeeder
 from ..datasets.muscima.Muscima import Muscima
 from ..datasets.SegmentationDescription import SegmentationDescription
-from ..datasets.TransferDataset import TransferDataset
 from ..datasets.Datasets import Datasets
 from ..datasets.DatasetOptions import DatasetOptions
 from ..datasets.SegmentationDescription import SegmentationDescription
@@ -37,14 +25,17 @@ class Ex_Datasets(Experiment):
         parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
         parser.add_argument("--unsup_pages", default=50, type=int, help="Unsupervised page count.")
         parser.add_argument("--batch_size", default=10, type=int, help="Batch size.")
-
+        parser.add_argument("--noise_size_ss", default=2, type=float, help="Noise size in staff space multiple.")
+        parser.add_argument("--noise_dropout", default=0.25, type=float, help="Noise dropout percentage.")
+        parser.add_argument("--symbol", default="notehead", type=str, help="Symbol to segment.")
+        
     def run(self, args: argparse.Namespace):
-        # noise = NoiseGenerator(
-        #     seed=opts.seed,
-        #     max_noise_size=NOISE_SIZE,
-        #     dropout_ratio=NOISE_DROPOUT,
-        #     largest_tiles_only=True
-        # )
+        noise = NoiseGenerator(
+            seed=args.dataset_seed,
+            max_noise_size=int(Muscima.DPSS * args.noise_size_ss),
+            dropout_ratio=args.noise_dropout,
+            largest_tiles_only=True
+        )
         opts = DatasetOptions(
             dataset_seed=args.dataset_seed,
             tile_size_wh=(512, 256),
@@ -52,9 +43,9 @@ class Ex_Datasets(Experiment):
             supervised_pages=args.sup_pages,
             unsupervised_pages=args.unsup_pages,
             batch_size=args.batch_size,
-            segdesc=SegmentationDescription.NOTEHEADS, # TODO: symbol argument
-            unsupervised_transformation=lambda x: tf.data.Dataset.zip((x, x)),
-            verbose=True
+            segdesc=SegmentationDescription.from_name(args.symbol),
+            unsupervised_transformation=noise.dataset_transformation,
+            verbose=True # print more info during dataset slicing
         )
         print("OPTS:", vars(opts))
         print()

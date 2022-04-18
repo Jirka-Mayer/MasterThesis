@@ -52,6 +52,20 @@ class SegmentationDescription:
             if channel.oversample
         )
 
+    @staticmethod
+    def from_name(name) -> Self:
+        if name == "notehead":
+            return SegmentationDescription.NOTEHEADS
+        if name == "stem":
+            return SegmentationDescription.STEM
+        if name == "staffline":
+            return SegmentationDescription.STAFFLINE
+        if name == "beam":
+            return SegmentationDescription.BEAM
+        if name == "flag":
+            return SegmentationDescription.FLAGS
+        raise Exception("Unknown symbol class: " + name)
+
 SegmentationDescription.NOTEHEADS = SegmentationDescription() \
     .add_channel("noteheads",
         mung_classes=[

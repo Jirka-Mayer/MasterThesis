@@ -24,6 +24,8 @@ class DatasetOptions:
         self.unsupervised_pages = unsupervised_pages
         self.batch_size = batch_size
         self.segdesc = segdesc
-        self.unsupervised_transformation = unsupervised_transformation
+        self.unsupervised_transformation = unsupervised_transformation \
+            if unsupervised_transformation is not None \
+            else lambda x: tf.data.Dataset.zip((x, x))
 
         self.verbose = verbose

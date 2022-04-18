@@ -298,7 +298,8 @@ class DenoisingUnetModel(tf.keras.Model):
                     filepath=self.model_directory.checkpoint_format_path,
                     monitor="val_f1_score",
                     verbose=1,
-                    save_best_only=True
+                    save_best_only=True,
+                    mode="max"
                 ),
             )
 

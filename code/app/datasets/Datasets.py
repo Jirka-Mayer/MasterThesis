@@ -35,7 +35,6 @@ class Datasets:
         
         sup_pages = remaining_pages.take(opts.supervised_pages)
         remaining_pages = remaining_pages.filter_out_writers(sup_pages.get_writers())
-        sup_pages.repeat_in_place(opts.supervised_repeat)
 
         unsup_pages = remaining_pages.take(opts.unsupervised_pages)
         remaining_pages = remaining_pages.filter_out_writers(unsup_pages.get_writers())
@@ -53,9 +52,12 @@ class Datasets:
             len(test_pages), len(remaining_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
+        assert len(sup_pages) == opts.supervised_pages
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
+
+        sup_pages.repeat_in_place(opts.supervised_repeat)
+        print("SUP PAGES AFTER REPEAT:", len(sup_pages))
 
         sup_pages.shuffle_in_place(seed=opts.dataset_seed)
         unsup_pages.shuffle_in_place(seed=opts.dataset_seed)
@@ -135,7 +137,6 @@ class Datasets:
         
         sup_pages = remaining_pages.take(opts.supervised_pages)
         remaining_sup_pages = remaining_pages.filter_out_pages(sup_pages)
-        sup_pages.repeat_in_place(opts.supervised_repeat)
 
         unsupable_pages = MuscimaPageList.get_entire_cvc_muscima()
         unsupable_pages = unsupable_pages.filter_out_writers(test_pages.get_writers())
@@ -156,9 +157,12 @@ class Datasets:
             len(test_pages), len(remaining_sup_pages), len(remaining_unsup_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
+        assert len(sup_pages) == opts.supervised_pages
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
+
+        sup_pages.repeat_in_place(opts.supervised_repeat)
+        print("SUP PAGES AFTER REPEAT:", len(sup_pages))
 
         sup_pages.shuffle_in_place(seed=opts.dataset_seed)
         unsup_pages.shuffle_in_place(seed=opts.dataset_seed)
@@ -234,8 +238,6 @@ class Datasets:
 
         sup_pages = all_ds_pages[:opts.supervised_pages]
         remaining_sup_pages = all_ds_pages[opts.supervised_pages:]
-        sup_pages *= opts.supervised_repeat
-        sup_pages_ds = tf.data.Dataset.from_tensor_slices(sup_pages)
         
         # setup muscima pages
         remaining_pages = MuscimaPageList.get_independent_train_set() \
@@ -260,9 +262,12 @@ class Datasets:
             len(test_pages), len(remaining_sup_pages), len(remaining_unsup_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
+        assert len(sup_pages) == opts.supervised_pages
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
+
+        sup_pages *= opts.supervised_repeat
+        print("SUP PAGES AFTER REPEAT:", len(sup_pages))
 
         unsup_pages.shuffle_in_place(seed=opts.dataset_seed)
 
@@ -271,6 +276,7 @@ class Datasets:
         deepscores_scaleup_factor = Muscima.DPSS / DeepScores.DPSS
 
         # setup training dataset
+        sup_pages_ds = tf.data.Dataset.from_tensor_slices(sup_pages)
         ds_sup = tf.data.Dataset.zip(datasets=(
             sup_pages_ds.apply(transform_ds_pages_to_images(meta_train)),
             sup_pages_ds.apply(transform_ds_pages_to_masks(meta_train, opts.segdesc))

@@ -35,6 +35,7 @@ class Datasets:
         
         sup_pages = remaining_pages.take(opts.supervised_pages)
         remaining_pages = remaining_pages.filter_out_writers(sup_pages.get_writers())
+        sup_pages.repeat_in_place(opts.supervised_repeat)
 
         unsup_pages = remaining_pages.take(opts.unsupervised_pages)
         remaining_pages = remaining_pages.filter_out_writers(unsup_pages.get_writers())
@@ -52,7 +53,7 @@ class Datasets:
             len(test_pages), len(remaining_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages
+        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
 
@@ -134,6 +135,7 @@ class Datasets:
         
         sup_pages = remaining_pages.take(opts.supervised_pages)
         remaining_sup_pages = remaining_pages.filter_out_pages(sup_pages)
+        sup_pages.repeat_in_place(opts.supervised_repeat)
 
         unsupable_pages = MuscimaPageList.get_entire_cvc_muscima()
         unsupable_pages = unsupable_pages.filter_out_writers(test_pages.get_writers())
@@ -154,7 +156,7 @@ class Datasets:
             len(test_pages), len(remaining_sup_pages), len(remaining_unsup_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages
+        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
 
@@ -232,6 +234,7 @@ class Datasets:
 
         sup_pages = all_ds_pages[:opts.supervised_pages]
         remaining_sup_pages = all_ds_pages[opts.supervised_pages:]
+        sup_pages *= opts.supervised_repeat
         sup_pages_ds = tf.data.Dataset.from_tensor_slices(sup_pages)
         
         # setup muscima pages
@@ -257,7 +260,7 @@ class Datasets:
             len(test_pages), len(remaining_sup_pages), len(remaining_unsup_pages)
         ))
 
-        assert len(sup_pages) == opts.supervised_pages
+        assert len(sup_pages) == opts.supervised_pages * opts.supervised_repeat
         assert len(unsup_pages) == opts.unsupervised_pages
         assert len(validation_pages) == opts.validation_pages
 

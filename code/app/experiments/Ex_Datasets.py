@@ -23,11 +23,14 @@ class Ex_Datasets(Experiment):
         parser.add_argument("--dataset", default="exploration", type=str, help="Dataset name.")
         parser.add_argument("--val_pages", default=10, type=int, help="Validation page count.")
         parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
+        parser.add_argument("--sup_repeat", default=1, type=int, help="Repeat supervised dataset.")
         parser.add_argument("--unsup_pages", default=50, type=int, help="Unsupervised page count.")
         parser.add_argument("--batch_size", default=10, type=int, help="Batch size.")
         parser.add_argument("--noise_size_ss", default=2, type=float, help="Noise size in staff space multiple.")
         parser.add_argument("--noise_dropout", default=0.25, type=float, help="Noise dropout percentage.")
         parser.add_argument("--symbol", default="notehead", type=str, help="Symbol to segment.")
+
+        parser.add_argument("--no_plot", default=False, action="store_true", help="Do not plot the dataset content.")
         
     def run(self, args: argparse.Namespace):
         noise = NoiseGenerator(
@@ -42,6 +45,7 @@ class Ex_Datasets(Experiment):
             validation_pages=args.val_pages,
             supervised_pages=args.sup_pages,
             unsupervised_pages=args.unsup_pages,
+            supervised_repeat=args.sup_repeat,
             batch_size=args.batch_size,
             segdesc=SegmentationDescription.from_name(args.symbol),
             unsupervised_transformation=noise.dataset_transformation,
@@ -50,6 +54,9 @@ class Ex_Datasets(Experiment):
         print("OPTS:", vars(opts))
         print()
         ds_train, ds_validate, ds_test = Datasets.by_name(args.dataset, opts)
+
+        if args.no_plot:
+            return
 
         print("Plotting...")
         import matplotlib.pyplot as plt

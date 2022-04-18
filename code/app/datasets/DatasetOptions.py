@@ -11,6 +11,7 @@ class DatasetOptions:
         validation_pages: int,
         supervised_pages: int,
         unsupervised_pages: int,
+        supervised_repeat: int,
         batch_size: int,
         segdesc: SegmentationDescription,
         unsupervised_transformation: Callable[[tf.data.Dataset], tf.data.Dataset],
@@ -22,6 +23,7 @@ class DatasetOptions:
         self.validation_pages = validation_pages
         self.supervised_pages = supervised_pages
         self.unsupervised_pages = unsupervised_pages
+        self.supervised_repeat = supervised_repeat
         self.batch_size = batch_size
         self.segdesc = segdesc
         self.unsupervised_transformation = unsupervised_transformation \

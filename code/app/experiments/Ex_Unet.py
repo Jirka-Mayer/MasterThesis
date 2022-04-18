@@ -29,6 +29,7 @@ class Options:
         self.val_pages = int(kwargs["val_pages"])
         self.sup_pages = int(kwargs["sup_pages"])
         self.unsup_pages = int(kwargs["unsup_pages"])
+        self.sup_repeat = int(kwargs["sup_repeat"])
         self.noise_size_ss = float(kwargs["noise_size_ss"])
         self.noise_dropout = float(kwargs["noise_dropout"])
         self.inner_features = int(kwargs["inner_features"])
@@ -49,6 +50,7 @@ class Options:
             validation_pages=self.val_pages,
             supervised_pages=self.sup_pages,
             unsupervised_pages=self.unsup_pages,
+            supervised_repeat=self.sup_repeat,
             batch_size=self.batch_size,
             segdesc=SegmentationDescription.from_name(self.symbol),
             unsupervised_transformation=noise.dataset_transformation
@@ -87,6 +89,7 @@ class Ex_Unet(Experiment):
         parser.add_argument("--dataset", default="exploration", type=str, help="Dataset name.")
         parser.add_argument("--val_pages", default=10, type=int, help="Validation page count.")
         parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
+        parser.add_argument("--sup_repeat", default=1, type=int, help="Repeat supervised dataset.")
         parser.add_argument("--unsup_pages", default=50, type=int, help="Unsupervised page count.")
         
         parser.add_argument("--noise_size_ss", default=2, type=float, help="Noise size in staff space multiple.")
@@ -111,6 +114,7 @@ class Ex_Unet(Experiment):
 
     def search(self, args: argparse.Namespace):
         pass
+        # validate semisupervised improvements on muscima++ only:
         # --seed 0 --dataset_seed 0 --sup_pages 10 --unsup_pages 0/10/50
 
     def compute_single_instance(self, opts: Options) -> float:
@@ -169,6 +173,7 @@ class Ex_Unet(Experiment):
             "dataset_seed",
             "sup_pages",
             "unsup_pages",
+            "sup_repeat",
             "seed",
             "symbol",
             "epochs",

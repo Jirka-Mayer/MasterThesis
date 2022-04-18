@@ -91,6 +91,11 @@ class MuscimaPageList:
         rnd = random.Random(seed)
         rnd.shuffle(self.instances)
 
+    def repeat_in_place(self, count: int):
+        if count == 1:
+            return
+        self.instances *= count
+
     def take(self, count: int) -> Self:
         return MuscimaPageList([
             p for i, p in enumerate(self.instances) if i < count

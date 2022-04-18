@@ -152,10 +152,11 @@ class Ex_Unet(Experiment):
                 **opts.model_kwargs()
             )
             model.perform_training(
-                epochs=opts.epochs,
+                epochs=opts.epochs if opts.epochs >= 0 else 10000,
                 ds_train=ds_train,
                 ds_validate=ds_validate,
                 save_checkpoints=True,
+                early_stop_after=None if opts.epochs >= 0 else -opts.epochs
             )
 
         self.evaluate_single_instance(opts)

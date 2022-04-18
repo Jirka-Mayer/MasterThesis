@@ -78,12 +78,12 @@ class Ex_Unet(Experiment):
             "command", type=str,
             help="One of: train, evaluate"
         )
-        parser.add_argument("--seed", default=42, type=int, help="Random seed.")
+        parser.add_argument("--seed", default=0, type=int, help="Random seed.")
         parser.add_argument("--symbol", default="notehead", type=str, help="Symbol to train on.")
         parser.add_argument("--epochs", default=200, type=int, help="Number of training epochs.")
         parser.add_argument("--batch_size", default=10, type=int, help="Batch size.")
         
-        parser.add_argument("--dataset_seed", default=42, type=int, help="Dataset-slicing random seed.")
+        parser.add_argument("--dataset_seed", default=0, type=int, help="Dataset-slicing random seed.")
         parser.add_argument("--dataset", default="exploration", type=str, help="Dataset name.")
         parser.add_argument("--val_pages", default=10, type=int, help="Validation page count.")
         parser.add_argument("--sup_pages", default=10, type=int, help="Supervised page count.")
@@ -108,6 +108,10 @@ class Ex_Unet(Experiment):
 
     def evaluate(self, args: argparse.Namespace):
         self.evaluate_single_instance(Options(**vars(args)))
+
+    def search(self, args: argparse.Namespace):
+        pass
+        # --seed 0 --dataset_seed 0 --sup_pages 10 --unsup_pages 0/10/50
 
     def compute_single_instance(self, opts: Options) -> float:
         tf.random.set_seed(opts.seed)

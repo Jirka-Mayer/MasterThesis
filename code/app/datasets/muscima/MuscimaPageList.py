@@ -1,4 +1,3 @@
-from tkinter import W
 from typing import List, Tuple, Sequence, TypeVar
 import pathlib
 import random

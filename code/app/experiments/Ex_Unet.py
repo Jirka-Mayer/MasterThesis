@@ -100,7 +100,7 @@ class Ex_Unet(Experiment):
         
         parser.add_argument("--unsupervised_loss_weight", default=1.0, type=float, help="Unsup loss weight.")
         parser.add_argument("--inner_features", default=8, type=int, help="Model capacity.")
-        parser.add_argument("--dropout", default=0.5, type=float, help="Training dropout.")
+        parser.add_argument("--dropout", default=0.0, type=float, help="Training dropout.")
         parser.add_argument("--skip_connection", default="gated", type=str, help="Type of skip connection (none, gated, solid).")
 
         parser.add_argument("--continue_training", default=False, action="store_true", help="Continues training.")

@@ -93,6 +93,17 @@ https://proceedings.neurips.cc/paper/2014/file/d523773c6b194f37b938d340d5d02232-
     - adding noise during reconstruction
         - guess it does nothing, gated skipconns are more important?
 
+- activation function
+    - relu -> elu
+    - relu gets stuck at the beginning of training
+        - gray image to black -> overshoots -> cannot recover
+            - "dying relu" problem -> cite
+        - elu can
+        - BUT only when training in the supervised mode -> unsup helps stabilize training
+    - hajic jr. also has elu (look for the original paper and comapre)
+    - the link i have from the source code uses relu, check them as well
+    - performance difference - none, see the training charts
+
 ------------------
 
 

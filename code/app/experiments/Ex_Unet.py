@@ -37,6 +37,8 @@ class Options:
         self.skip_connection = str(kwargs["skip_connection"])
         self.dataset = str(kwargs["dataset"])
 
+        self.continue_training = bool(kwargs["continue_training"])
+
     def dataset_options(self):
         noise = NoiseGenerator(
             seed=self.dataset_seed,
@@ -100,6 +102,8 @@ class Ex_Unet(Experiment):
         parser.add_argument("--dropout", default=0.5, type=float, help="Training dropout.")
         parser.add_argument("--skip_connection", default="gated", type=str, help="Type of skip connection (none, gated, solid).")
 
+        parser.add_argument("--continue_training", default=False, action="store_true", help="Continues training.")
+
     def run(self, args: argparse.Namespace):
         if args.command == "train":
             self.train(args)
@@ -131,8 +135,9 @@ class Ex_Unet(Experiment):
         print("#" * (len(model_name) + 4))
 
         # clear the model directory before running the experiment instance
-        shutil.rmtree(model_directory, ignore_errors=True)
-        os.makedirs(model_directory, exist_ok=True)
+        if not opts.continue_training:
+            shutil.rmtree(model_directory, ignore_errors=True)
+            os.makedirs(model_directory, exist_ok=True)
 
         cache_dir = self.experiment_directory(
             "cache-{}-{}".format(str(os.getpid()), str(time.time()))
@@ -151,6 +156,13 @@ class Ex_Unet(Experiment):
                 model_directory,
                 **opts.model_kwargs()
             )
+
+            if opts.continue_training and model.finished_epochs == 0:
+                print("Cannot continue on a model that has 0 finished epochs")
+                return
+            else:
+                print("Continuing from epoch " + str(model.finished_epochs))
+
             model.perform_training(
                 epochs=opts.epochs if opts.epochs >= 0 else 10000,
                 ds_train=ds_train,

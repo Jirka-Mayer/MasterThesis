@@ -77,6 +77,10 @@ Chapters of the thesis and their content:
             - symbols are not "too easy"
             - there is very little supervised data
                 - the model wont even converge on it (due to dropout?)
+
+They show improvements?
+https://proceedings.neurips.cc/paper/2014/file/d523773c6b194f37b938d340d5d02232-Paper.pdf
+
 - understanding hyperparameters
     - batch size
         - too small -> bad

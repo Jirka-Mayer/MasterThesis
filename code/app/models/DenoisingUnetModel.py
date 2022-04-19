@@ -10,7 +10,7 @@ def _upsample(output_features, x):
     x = tf.keras.layers.UpSampling2D(interpolation="nearest")(x)
     return tf.keras.layers.Conv2D(
         output_features, kernel_size=1,
-        activation="relu", padding="same"
+        activation="elu", padding="same"
     )(x)
 
 
@@ -19,12 +19,12 @@ def _unet_level(depth, max_depth, inner_features, skip_weight, dropout, x):
     
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
-        activation="relu", padding="same"
+        activation="elu", padding="same"
     )(x)
     x = tf.keras.layers.Dropout(dropout)(x)
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
-        activation="relu", padding="same"
+        activation="elu", padding="same"
     )(x)
 
     if depth == max_depth: # lowest level stops the recursion
@@ -54,12 +54,12 @@ def _unet_level(depth, max_depth, inner_features, skip_weight, dropout, x):
     
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
-        activation="relu", padding="same"
+        activation="elu", padding="same"
     )(x)
     x = tf.keras.layers.Dropout(dropout)(x)
     x = tf.keras.layers.Conv2D(
         level_features, kernel_size=3,
-        activation="relu", padding="same"
+        activation="elu", padding="same"
     )(x)
 
     return x

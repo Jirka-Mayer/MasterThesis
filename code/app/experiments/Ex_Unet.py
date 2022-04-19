@@ -164,7 +164,7 @@ class Ex_Unet(Experiment):
             if opts.continue_training and model.finished_epochs == 0:
                 print("Cannot continue on a model that has 0 finished epochs")
                 return
-            else:
+            if opts.continue_training:
                 print("Continuing from epoch " + str(model.finished_epochs))
 
             model.perform_training(

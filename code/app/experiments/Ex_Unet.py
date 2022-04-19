@@ -178,13 +178,23 @@ class Ex_Unet(Experiment):
         self.evaluate_single_instance(opts)
 
     def evaluate_single_instance(self, opts: Options):
-        # _, _, ds_test = Datasets.by_name(
-        #     opts.dataset,
-        #     opts.dataset_options()
-        # )
-        print("TODO: implement evaluation step")
-        # model -> load the best model checkpoint
-        #model.perform_evaluation(ds_test)
+        model_name = self.build_model_name(opts)
+        model_directory = self.experiment_directory(model_name)
+        
+        print("Creating dataset...")
+        _, _, ds_test = Datasets.by_name(
+            opts.dataset,
+            opts.dataset_options()
+        )
+
+        print("Loading model...")
+        model = DenoisingUnetModel.load_or_create(
+            model_directory,
+            **opts.model_kwargs()
+        )
+
+        print("Evaluating...")
+        model.perform_evaluation(ds_test)
 
     OPTS_MAP = [
         ("dataset", "ds"),

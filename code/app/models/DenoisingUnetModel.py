@@ -75,7 +75,8 @@ class DenoisingUnetModel(tf.keras.Model):
         depth: int = 3,
         unsup_loss_weight: float = 1.0,
         dropout: float = 0.5,
-        skip_connection: str = "gated" # one of "none", "gated", "solid"
+        skip_connection: str = "gated", # one of "none", "gated", "solid"
+        fully_supervised: bool = False
     ):
         super().__init__()
 
@@ -90,6 +91,7 @@ class DenoisingUnetModel(tf.keras.Model):
         self.unsup_loss_weight = unsup_loss_weight
         self.dropout = dropout
         self.skip_connection = skip_connection
+        self.fully_supervised = fully_supervised
 
         assert self.skip_connection in ["none", "gated", "solid"]
 
@@ -124,10 +126,11 @@ class DenoisingUnetModel(tf.keras.Model):
             self.segmentation_channels, kernel_size=1,
             activation="sigmoid", padding="same"
         )(x)
-        unet_denoised_output = tf.keras.layers.Conv2D(
-            self.denoised_channels, kernel_size=1,
-            activation="sigmoid", padding="same"
-        )(x)
+        if not self.fully_supervised:
+            unet_denoised_output = tf.keras.layers.Conv2D(
+                self.denoised_channels, kernel_size=1,
+                activation="sigmoid", padding="same"
+            )(x)
 
         # define models
         self.segmentation_unet = tf.keras.Model(
@@ -135,11 +138,12 @@ class DenoisingUnetModel(tf.keras.Model):
             outputs=unet_segmentation_output,
             name="segmentation_unet"
         )
-        self.reconstruction_unet = tf.keras.Model(
-            inputs=[unet_input, skip_weight_input],
-            outputs=unet_denoised_output,
-            name="reconstruction_unet"
-        )
+        if not self.fully_supervised:
+            self.reconstruction_unet = tf.keras.Model(
+                inputs=[unet_input, skip_weight_input],
+                outputs=unet_denoised_output,
+                name="reconstruction_unet"
+            )
 
     def get_config(self):
         return {
@@ -151,7 +155,8 @@ class DenoisingUnetModel(tf.keras.Model):
             "depth": self.depth,
             "unsup_loss_weight": self.unsup_loss_weight,
             "dropout": self.dropout,
-            "skip_connection": self.skip_connection
+            "skip_connection": self.skip_connection,
+            "fully_supervised": self.fully_supervised
         }
 
     @classmethod
@@ -164,7 +169,8 @@ class DenoisingUnetModel(tf.keras.Model):
             depth=config["depth"],
             unsup_loss_weight=config["unsup_loss_weight"],
             dropout=config["dropout"],
-            skip_connection=config["skip_connection"]
+            skip_connection=config["skip_connection"],
+            fully_supervised=config["fully_supervised"]
         )
         model.finished_epochs = config["finished_epochs"]
         return model
@@ -183,6 +189,9 @@ class DenoisingUnetModel(tf.keras.Model):
 
     @tf.function
     def call_reconstruct(self, inputs, training=None):
+        if self.fully_supervised:
+            raise Exception("Cannot do reconstructions on a fully supervised model")
+        
         if self.skip_connection in ["solid"]:
             skip_weight = tf.ones(shape=(1,))
         else:
@@ -200,20 +209,27 @@ class DenoisingUnetModel(tf.keras.Model):
 
         with tf.GradientTape() as tape:
             sup_y_pred = self.call(sup_x, training=True)
-            unsup_y_pred = self.call_reconstruct(unsup_x, training=True)
+            
+            if not self.fully_supervised:
+                unsup_y_pred = self.call_reconstruct(unsup_x, training=True)
             
             seg_loss = self.compiled_loss(
                 y_true=sup_y_true,
                 y_pred=sup_y_pred,
                 regularization_losses=self.losses
             )
-            noise_loss = self.compiled_loss(
-                y_true=unsup_y_true,
-                y_pred=unsup_y_pred,
-                regularization_losses=self.losses
-            )
 
-            loss = seg_loss + noise_loss * self.unsup_loss_weight # hyperparameter
+            if not self.fully_supervised:
+                noise_loss = self.compiled_loss(
+                    y_true=unsup_y_true,
+                    y_pred=unsup_y_pred,
+                    regularization_losses=self.losses
+                )
+
+            if not self.fully_supervised:
+                loss = seg_loss + noise_loss * self.unsup_loss_weight # hyperparameter
+            else:
+                loss = seg_loss
 
         ### gradients & update step & return ###
         

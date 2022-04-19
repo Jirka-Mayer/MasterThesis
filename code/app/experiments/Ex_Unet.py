@@ -63,7 +63,8 @@ class Options:
             "unsup_loss_weight": self.unsupervised_loss_weight,
             "inner_features": self.inner_features,
             "dropout": self.dropout,
-            "skip_connection": self.skip_connection
+            "skip_connection": self.skip_connection,
+            "fully_supervised": self.unsup_pages == 0
         }
 
 
@@ -156,6 +157,9 @@ class Ex_Unet(Experiment):
                 model_directory,
                 **opts.model_kwargs()
             )
+
+            if model.fully_supervised:
+                print("The model is in the fully supervised mode")
 
             if opts.continue_training and model.finished_epochs == 0:
                 print("Cannot continue on a model that has 0 finished epochs")

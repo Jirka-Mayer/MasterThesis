@@ -240,10 +240,12 @@ class DenoisingUnetModel(tf.keras.Model):
             zip(gradients, self.trainable_weights)
         )
 
-        return {
-            "seg_loss": seg_loss,
-            "noise_loss": noise_loss
+        ret = {
+            "seg_loss": seg_loss
         }
+        if not self.fully_supervised:
+            ret["noise_loss"] = noise_loss
+        return ret
 
 
     ########################

@@ -1,0 +1,7 @@
+% Metadata to be stored in PDF, see documentation of the pdfx package for more details.
+
+\Author{Jiří Mayer}
+\Title{Semi-supervised learning in Optical Music Recognition}
+\Keywords{optical music recognition\sep semi-supervised learning\sep deep neural network}
+\Subject{Abstract of thesis}
+\Publisher{Charles University}

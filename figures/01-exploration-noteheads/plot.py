@@ -67,3 +67,33 @@ plt.ylim([0.75, 0.925])
 plt.title("Notehead segmentation, smoothed")
 plt.savefig("noteheads-dropout-smooth.pdf")
 plt.close()
+
+
+#########################################
+# Evaluation table averages and stddevs #
+#########################################
+
+s10u0 = np.array([92.73, 93.02, 93.54, 93.34, 93.90, 93.00])
+s10u5 = np.array([90.87, 90.36, 90.05, 90.99, 90.58, 90.54])
+s10u10 = np.array([91.08, 90.13, 89.88, 89.65, 90.99, 91.43])
+s10u50 = np.array([92.38, 91.24, 91.56, 92.63, 90.95, 92.37])
+
+x = np.array([0, 5, 10, 50])
+y = np.array([s10u0.mean(), s10u5.mean(), s10u10.mean(), s10u50.mean()])
+y_err = np.array([s10u0.std(), s10u5.std(), s10u10.std(), s10u50.std()])
+plt.plot(x, y)
+plt.plot([0] * len(s10u0), s10u0, "bx")
+plt.plot([5] * len(s10u5), s10u5, "bx")
+plt.plot([10] * len(s10u10), s10u10, "bx")
+plt.plot([50] * len(s10u50), s10u50, "bx")
+plt.fill_between(x, y - y_err, y + y_err, alpha=0.2)
+plt.xlabel("Unsupervised pages")
+plt.ylabel("F1 score (%)")
+plt.title("Notehead segmentation - evaluation")
+plt.savefig("noteheads-evaluation.pdf")
+plt.close()
+
+print("s10u0 mean: {:0.2f} stddev: {:0.2f}".format(s10u0.mean(), s10u0.std()))
+print("s10u5 mean: {:0.2f} stddev: {:0.2f}".format(s10u5.mean(), s10u5.std()))
+print("s10u10 mean: {:0.2f} stddev: {:0.2f}".format(s10u10.mean(), s10u10.std()))
+print("s10u50 mean: {:0.2f} stddev: {:0.2f}".format(s10u50.mean(), s10u50.std()))

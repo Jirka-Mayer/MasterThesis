@@ -43,7 +43,7 @@ All model hyperparameters are set to sensible deafults. The derivation of these 
 
 We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
 
-Focusing only at the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the table \ref{tab:ExplorationNoteheads}. TODO: popiš že tabulka obsahuje testovací f1 skóre a že je to přes několik běhů a výsledek je? (snad bude vzestupný trend a když ne, tak komentuj, že je to totálně random)
+Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
 
 The reason for the drop in performance is actually caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
 
@@ -53,6 +53,13 @@ The reason for the drop in performance is actually caused by the fact, that the 
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-dropout-smooth.pdf}
     \caption{Lorem ipsum dolor.}
     \label{fig:ExplorationNoteheads}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-evaluation.pdf}
+    \caption{Lorem ipsum dolor.}
+    \label{fig:ExplorationNoteheadsEvaluation}
 \end{figure}
 
 \begin{table}[b!]
@@ -136,6 +143,7 @@ TODO: knowledge transfer experiment
 
 
 \subsection{Batch Size}
+\label{sec:BatchSize}
 
 \subsection{Dropout}
 

@@ -145,7 +145,28 @@ TODO: knowledge transfer experiment
 \subsection{Batch Size}
 \label{sec:BatchSize}
 
+In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower [CITE DL BOOK]. Since our model is fully cconvolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If the tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does [CITE]).
+
+Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at-least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
+
+TODO: figure with the failing training (bs=2,ratio=1:10)
+
+An example of such a failing training can be seen in figure TODO???. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
+
+Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
+
+
 \subsection{Dropout}
+\label{sec:Dropout}
+
+We introduced dropout [CITE] when training on small datasets (section \ref{sec:SemisupervisedImprovements}). The training was so noisy, that it was difficult to infer any measurable differences between runs. Therefore we used dropout as a mean to stabilize the training. The model performace also sligtly increased in this setting.
+
+When we train on larger datasets, the training is no longer unstable and dropout is not needed (section \ref{sec:UtilizingCvcMuscima}). In fact, it causes the training process to converge much slower (2x or more) and it does not perform any better.
+
+Both the original U-Net article [CITE] and the article by Hajič jr. et al. [CITE] use the U-Net architecture without any dropout. In fact, an article by Thompson et al. [CITE] argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
+
+From this we conclude that dropout should be disabled by default.
+
 
 \subsection{Skip Connections}
 

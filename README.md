@@ -33,3 +33,9 @@ https://arxiv.org/pdf/1701.04128.pdf
 
 Dynamic Routing Between Capsules
 https://cmp.felk.cvut.cz/~toliageo/rg/papers/SabourFrosstHinton_NIPS2017_Dynamic%20Routing%20Between%20Capsules.pdf
+
+Original Dropout paper:
+https://jmlr.org/papers/volume15/srivastava14a.old/srivastava14a.pdf
+
+Dropout on convultional layers may not be ideal (3.2):
+https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Tompson_Efficient_Object_Localization_2015_CVPR_paper.pdf

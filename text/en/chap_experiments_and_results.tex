@@ -138,6 +138,7 @@ Conclusions can be drawn from these observations:
 
 TODO: knowledge transfer experiment
 
+
 \section{Understanding Hyperparameters}
 \label{sec:UnderstandingHyperparameters}
 
@@ -147,7 +148,7 @@ TODO: knowledge transfer experiment
 
 In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower [CITE DL BOOK]. Since our model is fully cconvolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If the tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does [CITE]).
 
-Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at-least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
+Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
 
 TODO: figure with the failing training (bs=2,ratio=1:10)
 
@@ -165,11 +166,62 @@ When we train on larger datasets, the training is no longer unstable and dropout
 
 Both the original U-Net article [CITE] and the article by Hajič jr. et al. [CITE] use the U-Net architecture without any dropout. In fact, an article by Thompson et al. [CITE] argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
 
-From this we conclude that dropout should be disabled by default.
+It may be the case, that using batch normalization instead or dropout (like Hajič jr. et al. [CITE]) has the same effect of regularizing the network. However our goal is not to find the optimal architecture, but to measure the impact of unsupervised data. For that reason we did not explore this option.
+
+From all this we conclude that dropout should be disabled by default.
 
 
 \subsection{Skip Connections}
+\label{sec:SkipConnections}
+
 
 \subsection{Unsupervised Loss Weight}
+\label{sec:UnsupervisedLossWeight}
+
+% changes relative learning speed ofthe two tasks, but they get learned nonetheless
+% (we say we want segmentation - then reconstruction is also learned, just very slowly)
+% + charts show minimal difference when tweaking the value
+% when set to 0, fully-supervised mode is entered
+
+
+\subsection{Noise Parameters}
+\label{sec:NoiseParameters}
+
+% noise dropout - for solid connection has little effect -> model learns sup easily
+% for gated connection we see an improvement -> model is forced to learn representations
+% that actually help it?
+
 
 \subsection{Activation Function}
+\label{sec:ActivationFunction}
+
+We first used ReLU activation function (rectified linear unit) [CITE] in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article [CITE]. However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) [CITE] solved these issues. We took inspiration from Hajič jr. et al. [CITE], who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/functions.pdf}
+    \caption{Visualization of the explored activation functions. ReLU is flat in negative values and therefore has no gradient there. ELU has exponentially decaying gradient and leaky ReLU has a constant gradient. The parameter for the displayed leaky ReLU is 0.1 to make its shape more apparent.}
+    \label{fig:ActivationFunctions}
+\end{figure}
+
+The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem [CITE]. When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because the target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/progression.pdf}
+    \caption{The training process starts by learning to output a mostly black image, which probably causes the model to overshoot during the fully-supervised training and get stuck in the "dying ReLU" problem.}
+    \label{fig:ActivationTrainingProgression}
+\end{figure}
+
+Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that the unlabeled data acts as regularization, damping any extreme gradients, and stabilizing the training.
+
+We also tried using the leaky ReLU function [CITE] with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/performance.pdf}
+    \caption{An experiment from section \ref{sec:UtilizingCvcMuscima} with 8 inner features, trained in fully-supervised mode with various activation functions. All runs show the same performance.}
+    \label{fig:ActivationFunctionPerformances}
+\end{figure}
+
+We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of Dorfer. et al. [CITE] (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).

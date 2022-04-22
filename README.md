@@ -39,3 +39,6 @@ https://jmlr.org/papers/volume15/srivastava14a.old/srivastava14a.pdf
 
 Dropout on convultional layers may not be ideal (3.2):
 https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Tompson_Efficient_Object_Localization_2015_CVPR_paper.pdf
+
+Dying ReLU problem:
+https://arxiv.org/pdf/1903.06733.pdf

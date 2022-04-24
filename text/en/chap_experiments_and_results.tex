@@ -11,9 +11,77 @@ $ python3 main.py unet train --val_pages 123 ...
 \section{Architecture}
 \label{sec:Architecture}
 
+In the \emph{generative model} approach to semi-supervised learning, one usually starts with a model that can be trained in the unsupervised manner (either an autoencoder or a generative adversarial network [CITE, CITE]) and then extends it to also perform the supervised task. For example, when starting with an autoencoder, one can use the encoder part as a dimensionality reduction mechanism and then build a supervised classification network that classifies the learned embeddings [CITE].
+
+In our context of music recognition, we are highly motivated to build on top of the U-Net architecture [CITE] (figure \ref{fig:ArchitectureCombined}). It has first been used for biomedical image segmentation, however its superiority for object detection in music recognition has clearly been demonstrated by Pacha et al. [CITE].
+
+The architecture can be understood as a fully convolutional autoencoder, with residual (skip) connections added between the encoder and decoder on every resolution level. The U-Net encoder is a typical fully-convolutional encoder that gradually reduces image dimensions, while increasing the channel count. Such an architecture is able to learn abstract representations of symbols present in the image. The decoder then tries to go from these abstract representations back to specific ones, while at the same time modifying the reconstruction to fit the learned segmentation task. The core idea behind this architecture is that the decoder can utilize skip connections during upsampling, thereby producing a pixel-perfect segmentation.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/architecture-complete.pdf}
+    \caption{TODO}
+    \label{fig:ArchitectureCombined}
+\end{figure}
+
+% how exactly do we extend U-Net to perform classification - training setup
+% the problem skip connections pose (hard to learn unsupervised - our solution)
+
+% - Denoising U-Net
+%     - what input/output combinations we will use
+% - multiclass options
+%     - output channels
+%     - multiple decoders
+%     - seems not to improve, rather worsen if used incorrectly \[hajic\]
+% - describe the architecture (as seen in the image)
+%     - upsampling block details
+% - go over all parameters
+%     - inner features, dropout, activation function, sum vs. concat, skip gate
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=140mm]{../img/architecture-pieces.pdf}
+    \caption{TODO}
+    \label{fig:ArchitecturePieces}
+\end{figure}
+
 
 \section{Datasets}
 \label{sec:Datasets}
+
+% - MUSCIMA++
+% - DeepScores
+%     - https://arxiv.org/pdf/1804.00525.pdf
+%     - v2: https://ieeexplore.ieee.org/document/9412290/
+% - solving resolution problems
+% - solving stability (dataset seed) when increasing unsupervised ratio (fixing sup split, growing unsup split)
+
+
+\section{Noise Generation}
+\label{sec:NoiseGeneration}
+
+% - noise generation and parameters
+
+
+\section{Training}
+\label{sec:Training}
+
+% - composite batches
+% - loss function
+% - pick the model with the lowest validation loss over a training session
+
+
+\section{Evaluation Metrics}
+\label{sec:EvaluationMetrics}
+
+% - F1 score
+% - pixelwise vs. object detection
+%     - reference other works and their approach
+%     - pixelwise isn't directly telling about object detection performance
+% - thresholding due to varying image resolution
+
+% - object detection metrics overview:
+%     https://towardsdatascience.com/evaluating-performance-of-an-object-detection-model-137a349c517b
 
 
 \section{Semi-supervised Improvements}
@@ -119,8 +187,6 @@ The validation dataset F1 score over the course of training can be seen in figur
     \item Models with 4 and 8 \emph{inner features} worsen much less and also get smoother (especially 4 becomes much more stable).
     \item Model 16 no longer worsens, it is able to learn both tasks.
 \end{itemize}
-
-TODO: try training the 32ft semi-supervised model, it could maybe get over the bar...
 
 Conclusions can be drawn from these observations:
 

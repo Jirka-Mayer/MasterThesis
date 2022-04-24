@@ -42,3 +42,6 @@ https://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Tompson_Effici
 
 Dying ReLU problem:
 https://arxiv.org/pdf/1903.06733.pdf
+
+Autoencoder(s), overview of all:
+https://arxiv.org/pdf/2003.05991.pdf

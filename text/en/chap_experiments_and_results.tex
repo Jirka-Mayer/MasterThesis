@@ -15,7 +15,7 @@ In the \emph{generative model} approach to semi-supervised learning, one usually
 
 In our context of music recognition, we are highly motivated to build on top of the U-Net architecture [CITE] (figure \ref{fig:ArchitectureCombined}). It has first been used for biomedical image segmentation, however its superiority for object detection in music recognition has clearly been demonstrated by Pacha et al. [CITE].
 
-The architecture can be understood as a fully convolutional autoencoder, with residual (skip) connections added between the encoder and decoder on every resolution level. The U-Net encoder is a typical fully-convolutional encoder that gradually reduces image dimensions, while increasing the channel count. Such an architecture is able to learn abstract representations of symbols present in the image. The decoder then tries to go from these abstract representations back to specific ones, while at the same time modifying the reconstruction to fit the learned segmentation task. The core idea behind this architecture is that the decoder can utilize skip connections during upsampling, thereby producing a pixel-perfect segmentation.
+The architecture can be viewed as a fully convolutional autoencoder with residual (skip) connections added between the encoder and decoder on every resolution level. The U-Net encoder is a typical fully-convolutional encoder that gradually reduces image dimensions, while increasing the channel count. Such an architecture is able to learn abstract representations of symbols present in the input image. The decoder then tries to go from these abstract representations back to specific ones, while at the same time modifying the reconstruction to fit the learned segmentation task. The core idea behind this architecture is that the decoder can utilize skip connections during upsampling, thereby producing a pixel-perfect segmentation.
 
 \begin{figure}[ht]
     \centering
@@ -24,8 +24,34 @@ The architecture can be understood as a fully convolutional autoencoder, with re
     \label{fig:ArchitectureCombined}
 \end{figure}
 
-% how exactly do we extend U-Net to perform classification - training setup
-% the problem skip connections pose (hard to learn unsupervised - our solution)
+We choose to share the entire U-Net model for both the supervised and unsupervised tasks. The two tasks are differentiated only at the very last layer. The original U-Net architecture ends with a 1x1 convolution layer with sigmoid activation. It can be viewed as a pixelwise softmax for two output classes of a typical classification model. We decided to fork the architecture here, having one sigmoid convolution for the supervised segmentation task and one for the unsupervised reconstruction task.
+
+The supervised task can be trained in almost the same way as the the original U-Net archtiecture:
+
+\begin{itemize}
+    \item A batch $(x, y)$ of input images and expected segmentation masks is taken from the dataset.
+    \item Input images $x$ are fed through the model, producing a prediction for the segmentation mask $\hat{y}$ and for the reconstructed image $\hat{x}$.
+    \item A loss function is used, computing the distance between $y$ and $\hat{y}$ and generating gradients for the network.
+    \item Reconstruction output $\hat{x}$ is ignored and no gradients for the branch are computed.
+    \item An optimizer uses computed gradients to update model parameters.
+\end{itemize}
+
+The unsupervised task could be trained in the same way, using the other output branch of the model. This would work for a typical autoencoder, but since the U-Net architecture contains skip connections, the model could learn an identity function without using any of the abstraction-learning layers. The goal of unsupervised learning is learning these abstract features, so this training scheme is infeasible in our context.
+
+We propose two ways of overcoming this challenge:
+
+\begin{itemize}
+    \item gated skip connections
+    \item denoising
+\end{itemize}
+
+One option is to disable skip connections during reconstruction training and keep them enabled during segmentation training. This should force the model to learn abstract features during reconstruction, while also being able to utilize skip connections during segmentation. This scheme performs much better than a typical autoencoder without any skip connections, but is still outperformed by the next proposed scheme (see detailed comparison in section \ref{sec:SkipConnections}).
+
+The second option is add some noise to the input image during reconstruction training. The model would learn to not only reconstruct the input image, but also to remove the added noise. We took inspiration from denoising autoencoders [CITE AUTOENCODERS]. The difficult part is designing the noise function such that it would cause the model to learn abstract representaions (see section \ref{sec:NoiseGeneration}).
+
+We consider the described scheme for unsupervised U-Net training to be the main contribution of this thesis. The proposed experiments try to assess the viability of the scheme in the context of semi-supervised learning.
+
+Both the segmentation and reconstruction tasks are trained jointly on composite batches and a single composite loss function. A single optimizer step is used to update model parameters for both tasks. The process is described in detail in section \ref{sec:Training}.
 
 % - Denoising U-Net
 %     - what input/output combinations we will use
@@ -35,8 +61,6 @@ The architecture can be understood as a fully convolutional autoencoder, with re
 %     - seems not to improve, rather worsen if used incorrectly \[hajic\]
 % - describe the architecture (as seen in the image)
 %     - upsampling block details
-% - go over all parameters
-%     - inner features, dropout, activation function, sum vs. concat, skip gate
 
 \begin{figure}[p]
     \centering
@@ -60,6 +84,8 @@ The architecture can be understood as a fully convolutional autoencoder, with re
 \section{Noise Generation}
 \label{sec:NoiseGeneration}
 
+% - why large noise -> to learn representaions?
+% - mention cuneiform article from ICDAR - GAN reconstruction
 % - noise generation and parameters
 
 
@@ -67,6 +93,7 @@ The architecture can be understood as a fully convolutional autoencoder, with re
 \label{sec:Training}
 
 % - composite batches
+% - training both simultaneously
 % - loss function
 % - pick the model with the lowest validation loss over a training session
 
@@ -239,6 +266,10 @@ From all this we conclude that dropout should be disabled by default.
 
 \subsection{Skip Connections}
 \label{sec:SkipConnections}
+
+% chart of the three
+% gated works better than none, and solid are better still
+% however we are still below fully-supervised, maybe being over would change the order! Disclaim that!
 
 
 \subsection{Unsupervised Loss Weight}

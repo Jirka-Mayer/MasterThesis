@@ -51,16 +51,13 @@ The second option is add some noise to the input image during reconstruction tra
 
 We consider the described scheme for unsupervised U-Net training to be the main contribution of this thesis. The proposed experiments try to assess the viability of the scheme in the context of semi-supervised learning.
 
-Both the segmentation and reconstruction tasks are trained jointly on composite batches and a single composite loss function. A single optimizer step is used to update model parameters for both tasks. The process is described in detail in section \ref{sec:Training}.
+Both the segmentation and reconstruction tasks are trained jointly on composite batches and a single composite loss function. A single optimizer step is used to update model parameters for both tasks somultaneously. The process is described in detail in section \ref{sec:Training}.
 
-% - Denoising U-Net
-%     - what input/output combinations we will use
-% - multiclass options
-%     - output channels
-%     - multiple decoders
-%     - seems not to improve, rather worsen if used incorrectly \[hajic\]
-% - describe the architecture (as seen in the image)
-%     - upsampling block details
+The last sigmoid layers output images with only one channel. For the reconstruction output, this data is interpreted as a grayscale image. For the segmentation output, it represents the probability the model assigns to each pixel of being in the target class. This means that the model can learn to segment only one symbol class.
+
+Hajič et al. [CITE] have explored the option of having multiple segmentation output channels. The hypothesis is that having the model learn multiple classes would improve its accuracy, since some internal representations can be shared. An added advantage is the reduced inference time as multiple segmentation masks can be infered in a single pass. Such a training however introduces problems related to unbalanced class distribution in the training data. Even if these can be overcome, their results suggest minimal accuracy benefits and a risk of decreasing accuracy in some cases.
+
+Despite the fact that our experiment source code lets us easily train multiple classes, we choose not to explore this path as we are interested in the semi-supervised effects only.
 
 \begin{figure}[p]
     \centering
@@ -68,6 +65,27 @@ Both the segmentation and reconstruction tasks are trained jointly on composite 
     \caption{TODO}
     \label{fig:ArchitecturePieces}
 \end{figure}
+
+The figure \ref{fig:ArchitecturePieces} contains a recursive block diagram of our extended U-Net architecture. The model takes a single image as the input and produces both the segmentation mask and the reconstructed image. When training segmentation, the reconstructed image is ignored and when training reconstruction, the input image is covered in noise and the output segmentation is ignored.
+
+Each level of the network begins and ends with a convolutional block (CB). It consists of two identical 3x3 convolutional layers with an optional dropout layer in between them. Both convolutional blocks on the same level output the same number of feature channels. The number of feature channels is dictated by a hyperparameter we call \emph{inner features}. If the network has 4 inner features, the zero-th level convolutions output 4 feature channels. Each successive level then has twice as many feature channels as the one above it (e.g. 4, 8, 16, 32). The figure \ref{fig:ArchitectureCombined} contains image dimensions and channel counts for each edge in the network. The image dimensions are taken with respect to an input image tile of size 512x256.
+
+The downsampling block is implemented as a 2D max pooling layer [CITE]. The number of feature channels is preserved. If we track the feature count through the encoder, we always first double the number of channels in the convolutional block and then reduce the spatial dimensionality in half in the downsampling block. This way the model can learn to extract higher-level features, before the spatial resolution is lowered. Since the image is two dimensional, halving the resolution shrinks the number of pixels to one quarter. Combined with the doubling of channel count, one encoder level effectively discards half of the image data. This acts as a bottleneck, forcing the network to learn relevant high-level representations.
+
+The upsampling block has to perform two operations:
+
+\begin{itemize}
+    \item double the spatial dimensions
+    \item halve the channel count
+\end{itemize}
+
+The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, that can be trained to select or combine specific input channels. The output may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resoltuion of the skip connection).
+
+The gate on the skip connection is implemented as a multiplication by one or zero. This also causes any back-propagating gradients to be zeroed out, when the gate is closed. We took inspiration for the gating implementation from LSTM and GRU cells used in recurrent neural networks [CITE, CIRE].
+
+The output of the upsampling block and the skip connection is merged in an elementwise sum operation. The original U-Net paper uses concatenation [CITE], however Dorfer et al. have shown that using a sum instead speeds up training, while having minimal impact on model accuracy [CITE].
+
+In all layers (except for the two output sigmoid layers) the exponential linear unit (ELU) activation function is used. The reasons for this are described in section \ref{sec:ActivationFunction}.
 
 
 \section{Datasets}
@@ -92,7 +110,9 @@ Both the segmentation and reconstruction tasks are trained jointly on composite 
 \section{Training}
 \label{sec:Training}
 
+% - image tiles / tile size
 % - composite batches
+% - what input/output combinations we will use
 % - training both simultaneously
 % - loss function
 % - pick the model with the lowest validation loss over a training session

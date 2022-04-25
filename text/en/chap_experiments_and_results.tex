@@ -124,7 +124,7 @@ MUSCIMA++ was created by Jan Hajič jr. and Pavel Pecina as a general-purpouse O
     \centering
     \includegraphics[width=100mm]{../img/muscima-pp.png}
     \caption{Annotations present in the MUSCIMA++ dataset (bounding boxes, segmentation masks and the notation graph). The image is taken from [CITE]}
-    \label{fig:CvcMuscima}
+    \label{fig:MuscimaPP}
 \end{figure}
 
 The dataset was updated in 2019, fixing bugs and modifying class names to be aligned with the SMuFL\footnote{\url{https://www.smufl.org/}} standard. A similar update was also performed on the DeepScores dataset [CITE], making it easier to use both datasets simultaneously. The latest dataset description and accompanying tools can be found on the GitHub page\footnote{\url{https://github.com/OMR-Research/muscima-pp}} of the OMR Research group\footnote{\url{https://omr-research.net/}}.
@@ -134,11 +134,20 @@ We will use this dataset as a source of labeled data for semantic segmentation.
 
 \subsection{DeepScores}
 
+The version 2 of this dataset was introduced in the article \emph{The DeepScoresV2 Dataset and Benchmark for Music Object Detection} [CITE]. The dataset contains entire pages of printed music, with annotations best suited for object detection, semantic segmentation and object classification. It was created from MusicXML documents taken from the MuseScore\footnote{\url{https://musescore.com/sheetmusic}} website and engraved using the LilyPond\footnote{\url{https://lilypond.org/}} tool. The dataset contains 255,386 pages of music, but also provides a dense and diverse subset, having only 1,714 pages. The version 2 also introduced a MUSCIMA++ compatibility mode, making it easier for the two datasets to be used simultaneously.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/deepscores.png}
+    \caption{An example of the semantic segmentation labels from the DeepScores v2 dataset. The dataset is very large, but digitally engraved.}
+    \label{fig:DeepScoresV2}
+\end{figure}
+
+We will use this dataset as a source of labeled data for semantic segmentation.
+
 
 \subsection{Data pipeline}
 
-% - MUSCIMA++
-% - DeepScores
 % - solving resolution problems
 % - solving stability (dataset seed) when increasing unsupervised ratio (fixing sup split, growing unsup split)
 

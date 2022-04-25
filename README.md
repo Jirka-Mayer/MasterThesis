@@ -45,3 +45,9 @@ https://arxiv.org/pdf/1903.06733.pdf
 
 Autoencoder(s), overview of all:
 https://arxiv.org/pdf/2003.05991.pdf
+
+DeepScores v1:
+https://arxiv.org/pdf/1804.00525.pdf
+
+DeepScores v2:
+https://ieeexplore.ieee.org/document/9412290/

@@ -47,7 +47,7 @@ We propose two ways of overcoming this challenge:
 
 One option is to disable skip connections during reconstruction training and keep them enabled during segmentation training. This should force the model to learn abstract features during reconstruction, while also being able to utilize skip connections during segmentation. This scheme performs much better than a typical autoencoder without any skip connections, but is still outperformed by the next proposed scheme (see detailed comparison in section \ref{sec:SkipConnections}).
 
-The second option is add some noise to the input image during reconstruction training. The model would learn to not only reconstruct the input image, but also to remove the added noise. We took inspiration from denoising autoencoders [CITE AUTOENCODERS]. The difficult part is designing the noise function such that it would cause the model to learn abstract representaions (see section \ref{sec:NoiseGeneration}).
+The second option is to add some noise to the input image during reconstruction training. The model would learn to not only reconstruct the input image, but also to remove the added noise. We took inspiration from denoising autoencoders [CITE AUTOENCODERS]. The difficult part is designing the noise function such that it would cause the model to learn abstract representaions (see section \ref{sec:NoiseGeneration}).
 
 We consider the described scheme for unsupervised U-Net training to be the main contribution of this thesis. The proposed experiments try to assess the viability of the scheme in the context of semi-supervised learning.
 
@@ -79,7 +79,7 @@ The upsampling block has to perform two operations:
     \item halve the channel count
 \end{itemize}
 
-The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, that can be trained to select or combine specific input channels. The output may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resoltuion of the skip connection).
+The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, that can be trained to select or combine specific input channels. The output may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resolution of the skip connection).
 
 The gate on the skip connection is implemented as a multiplication by one or zero. This also causes any back-propagating gradients to be zeroed out, when the gate is closed. We took inspiration for the gating implementation from LSTM and GRU cells used in recurrent neural networks [CITE, CIRE].
 
@@ -91,10 +91,54 @@ In all layers (except for the two output sigmoid layers) the exponential linear 
 \section{Datasets}
 \label{sec:Datasets}
 
+When performing experiments, we will use these three datasets:
+
+\begin{itemize}
+    \item CVC-MUSCIMA [CITE]
+    \item MUSCIMA++ [CITE]
+    \item DeepScores v2 [CITE]
+\end{itemize}
+
+These are the only datasets in the OMR field that contain semantic segmentation labels (for Common Western Music Notation). A comprehensive list of available OMR datasets is maintained by Alexander Pacha on his GitHub page\footnote{\url{https://apacha.github.io/OMR-Datasets/}}.
+
+
+\subsection{CVC-MUSCIMA}
+
+This dataset was introduced in the article \emph{CVC-MUSCIMA: A ground truth of handwritten music score images for writer identification and staff removal} [CITE]. It contains 1000 pages of handwritten music, created by having 50 writers transcribe 20 unique music pages. It was designed for the tasks of staff removal and writer identification. It is also the only handwritten music dataset, consisting of entire music pages -- all other handwritten datasets contain only individual symbols. This makes it very important for research focusing on symbol detection.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/cvc-muscima.png}
+    \caption{One page from the CVC-MUSCIMA dataset. Image taken from the website \url{http://www.cvc.uab.es/cvcmuscima/index_database.html}}
+    \label{fig:CvcMuscima}
+\end{figure}
+
+Since the dataset does not contain segmentation labels, we will use it primarily as a source of unlabeled training data.
+
+
+\subsection{MUSCIMA++}
+
+MUSCIMA++ was created by Jan Hajič jr. and Pavel Pecina as a general-purpouse OMR dataset. It was introduced in the article \emph{In Search of a Dataset for Handwritten Optical Music Recognition: Introducing MUSCIMA++} [CITE]. The dataset builds on top of the CVC-MUSCIMA dataset, providing rich annotations for 140 selected pages. The annotation scheme was designed to be sufficiently low-level for tasks such as object detection (bounding boxes, symbol classes, segmentation masks), while also having relationship data in the form of an oriented graph, that lets a user extract semantic information about the music. Dataset authors call this annotation scheme the \emph{Music Notation Graph} (MuNG).
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=100mm]{../img/muscima-pp.png}
+    \caption{Annotations present in the MUSCIMA++ dataset (bounding boxes, segmentation masks and the notation graph). The image is taken from [CITE]}
+    \label{fig:CvcMuscima}
+\end{figure}
+
+The dataset was updated in 2019, fixing bugs and modifying class names to be aligned with the SMuFL\footnote{\url{https://www.smufl.org/}} standard. A similar update was also performed on the DeepScores dataset [CITE], making it easier to use both datasets simultaneously. The latest dataset description and accompanying tools can be found on the GitHub page\footnote{\url{https://github.com/OMR-Research/muscima-pp}} of the OMR Research group\footnote{\url{https://omr-research.net/}}.
+
+We will use this dataset as a source of labeled data for semantic segmentation.
+
+
+\subsection{DeepScores}
+
+
+\subsection{Data pipeline}
+
 % - MUSCIMA++
 % - DeepScores
-%     - https://arxiv.org/pdf/1804.00525.pdf
-%     - v2: https://ieeexplore.ieee.org/document/9412290/
 % - solving resolution problems
 % - solving stability (dataset seed) when increasing unsupervised ratio (fixing sup split, growing unsup split)
 

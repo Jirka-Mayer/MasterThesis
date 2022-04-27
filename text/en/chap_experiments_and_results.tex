@@ -79,7 +79,7 @@ The upsampling block has to perform two operations:
     \item halve the channel count
 \end{itemize}
 
-The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, that can be trained to select or combine specific input channels. The output may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resolution of the skip connection).
+The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, which can be trained to select or combine specific input channels. The upsampling output image may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resolution of the skip connection).
 
 The gate on the skip connection is implemented as a multiplication by one or zero. This also causes any back-propagating gradients to be zeroed out, when the gate is closed. We took inspiration for the gating implementation from LSTM and GRU cells used in recurrent neural networks [CITE, CIRE].
 
@@ -146,10 +146,35 @@ The version 2 of this dataset was introduced in the article \emph{The DeepScores
 We will use this dataset as a source of labeled data for semantic segmentation.
 
 
-\subsection{Data pipeline}
+\subsection{Combining datasets}
 
-% - solving resolution problems
-% - solving stability (dataset seed) when increasing unsupervised ratio (fixing sup split, growing unsup split)
+We would like to slice and combine described datasets in various ways, depending on the performed experiment. There are two operations we want to perform:
+
+\begin{itemize}
+    \item Split an existing dataset into multiple slices (e.g. validation, supervised and unsupervised slices).
+    \item Combine two different datasets together.
+\end{itemize}
+
+The splitting is needed for an experiment, that gradually increases the amount of unlabeled data and measures the change in model accuracy. This means the splitting logic has to be stable with respect to the size of the unlabeled slice:
+
+\begin{itemize}
+    \item We do not want the content of other slices to change, when we change the size of the unlabeled slice.
+    \item We want the unlabeled slice to only gain new data, not to be completely resampled.
+\end{itemize}
+
+This stability is achieved by giving consideration to the splitting logic (sampling the unlabeled data as the very last slice) and to the shuffling logic (the data is shuffled prior to splitting). All the randomness in the process is controled by a parameter called \emph{dataset seed}, which is distinct from the plain \emph{seed} used for other initialization (model weights and noise generation). Introduction of the \emph{dataset seed} is essential for isolating our experiments from variability introduced by differential dataset sampling.
+
+One additional consideration has to be made when sampling datasets CVC-MUSCIMA and MUSCIMA++. Since their content consists of music transcribed by 50 different wirters, we would like our splits to keep these writers separate. Anotherwords we do not want a single writer to be present in both the training set and the validation set. We enforce this constraint to better measure the ability of the trained model to generalize. The official test set of MUSCIMA++ built with this approach is called the \emph{writer-independent test set}, therefore we will call this property of our splitting logic \emph{writer-independence}.
+
+% TODO: figure - splitting logic in an example "all" -> "shuffle" -> "splits"
+
+When combining datsets, we run into the problem of image resolution. Since our proposed architecture learns visual features in scale-dependant way, we need to bring all datasets to the same resolution. Datasets CVC-MUSCIMA and MUSCIMA++ have the same source images, so the problem is not present here, however the dataset DeepScores is sampled at a lower resolution. In paper printing, a unit of DPI (dots per inch) is used. We cannot, however, use this unit, since it would assume the music from both datasets has the same size when printed on paper. A more general approach would be to define a unit, that could be derived from the raster image itself, without any knowledge of the scanning/printing DPI. The open format MusicXML\footnote{\url{https://www.musicxml.com/}} uses a spatial unit defined as \emph{one tenth of interline space} (the distance between two adjacent stafflines). We took inspiration form this and defined a unit we call DPSS (dots per staff space). DPSS of a raster music document is the number of pixels between two neighbouring stafflines. We measured the DPSS of CVC-MUSCIMA to be \verb`28.75 px` and of DeepScores to be \verb`16.0 px`.
+
+% TODO: figure - visualization of DPSS in MUSCIMA++ sample
+
+When matching the resolution of both datasets, we need to perform image resizing and we need to choose the target size and the interpolation method. We ended up upscaling the DeepScores dataset to match the resolution of the CVC-MUSCIMA dataset with the bilinear interpolation method.
+
+In the beginning we tried downscaling CVC-MUSCIMA with area interpolation method. We chose the area method because it does not produce aliasing artifacts (it works by averaging pixel values over an area). It, however, introduced problems with thin lines (such as stafflines and stems) that faded below 50\% intensity on most pixels. That caused the pixelwise F1 score we use to evaluate the experiments to become very noisy and difficult to interpret.
 
 
 \section{Noise Generation}
@@ -187,7 +212,7 @@ We will use this dataset as a source of labeled data for semantic segmentation.
 \section{Semi-supervised Improvements}
 \label{sec:SemisupervisedImprovements}
 
-The main hypothesis this work is attempting to validate is that adding unlabelled data to the training process helps. We primarily want to improve model accuracy, but as we will see, this is not what our experiments suggest. They do, however, show improvements in other areas, such as training stability and reduced overfitting (section \ref{sec:UtilizingCvcMuscima}).
+The main hypothesis this work is attempting to validate is that adding unlabeled data to the training process helps. We primarily want to improve model accuracy, but as we will see, this is not what our experiments suggest. They do, however, show improvements in other areas, such as training stability and reduced overfitting (section \ref{sec:UtilizingCvcMuscima}).
 
 In the first experiment, we test how various labeled to unlabeled data ratios affect the training process. The experiment uses the MUSCIMA++ dataset [CITE]:
 

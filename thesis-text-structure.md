@@ -18,6 +18,8 @@ Chapters of the thesis and their content:
     - this is probably because the model learns only low-level features (as seen in denoising visualizations); should it learn higher-level featuers, it could work better (GAN, etc..)
 - code is on github, link
 
+TODO: this should contain the specific task we are doing - what model, what evaluation, why, that there's more to be explored etc.
+
 
 ## Related Work
 

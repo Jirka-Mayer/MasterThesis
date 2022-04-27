@@ -410,10 +410,11 @@ From all this we conclude that dropout should be disabled by default.
 \subsection{Unsupervised Loss Weight}
 \label{sec:UnsupervisedLossWeight}
 
-% changes relative learning speed ofthe two tasks, but they get learned nonetheless
-% (we say we want segmentation - then reconstruction is also learned, just very slowly)
-% + charts show minimal difference when tweaking the value
-% when set to 0, fully-supervised mode is entered
+This parameter determines the relative magnitude of the segmentation and the reconstruction loss. We first though this parameter would have significant impact in the training and would need to be tuned carefully. It turned out not to be the case. We ended up setting it 1 and not optimizing it.
+
+Varying this parameter from 10 to 0.1 has minimal impact on model performance. When we examined the segmentation masks and reconstruction images as they evolve throughout the training process, we discovered that the primary impact is the change of speed of learning each task. When the parameter is 10, the reconstruction task is learned quickly and segmentation task is learned slowly. When we set it 0.1 the situation is reversed. If we let the training covnerge, it ends up learning both tasks equally well.
+
+Interesting behaviour happens only at the extreme. When the parameter is set to zero, the reconstruction task produces no gradients and the training collapses to the fully-supervised regime. We performed an experiment that verified this behaviour.
 
 
 \subsection{Noise Parameters}

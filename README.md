@@ -51,3 +51,12 @@ https://arxiv.org/pdf/1804.00525.pdf
 
 DeepScores v2:
 https://ieeexplore.ieee.org/document/9412290/
+
+Variational autoencoder:
+https://arxiv.org/abs/1312.6114
+
+Semisup pytorch github:
+https://github.com/wohlert/semi-supervised-pytorch
+
+Adam (Kingma et al):
+https://arxiv.org/abs/1412.6980

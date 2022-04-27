@@ -188,12 +188,38 @@ In the beginning we tried downscaling CVC-MUSCIMA with area interpolation method
 \section{Training}
 \label{sec:Training}
 
-% - image tiles / tile size
-% - composite batches
-% - what input/output combinations we will use
-% - training both simultaneously
-% - loss function
-% - pick the model with the lowest validation loss over a training session
+There are many options in how a semi-supervised generative model is trained. One option is to pre-train a model in the unsupervised mode and after that train a separate supervised part of the model [CITE KINGMA 2014]. Another option is to run the supervised training as a fine-tuning step after the unsupervised training, similar to the transfer learning approach [CITE TRANSFER LEARNING]. We chose to train both the supervised and the unsupervised tasks simultaneously, using a single, composite loss function.
+
+One training step has the following structure:
+
+\begin{itemize}
+    \item An input image is passed through the network and the produced segmentation is compared to the gold one, producing the supervised loss.
+    \item An input image with noise added is passed through the network and the produced reconstruction is compared to the clean input image, producing the reconstruction loss.
+    \item The reconstruction loss is multiplied by a constant hyperparameter we call \emph{unsupervised loss weight}. Both losses are summed to produce the composite loss.
+    \item The composite loss is used to calculate model gradients.
+    \item An optimizer uses these gradients to update model weights.
+\end{itemize}
+
+The input to the training step is a composite batch of $(x_l, y_l)$ labeled data pairs and $(x_u, y_u)$ unlabeled data pairs.
+
+\begin{itemize}
+    \item $x_l$ are input images for segmentation
+    \item $y_l$ are gold segmentation masks
+    \item $x_u$ are noised input images for reconstruction
+    \item $y_u$ are cleaned target reconstruction images
+\end{itemize}
+
+The number of labeled and unlabeled pairs in a composite batch differs and their ratio is related to the ratio of labeled to unlabeled data in the dataset. The hyperparameter \emph{batch size} dictates the total number of labeled and unlabeled pairs in one composite batch.
+
+% TODO: image that illustrates the batching process (input data -> batched data)
+
+Composite batches are created by taking training pairs from the labeled and unlabeled splits of the dataset. When the next pair is taken, we either take it from the labeled or the unlabeled split, whichever is larger, with respect to their target ratio. For example, if their ratio in the whole dataset is 1:5 (labeled to unlabeled) and we have 10:201 remaining pairs, we will take an unlabeled pair next. We take pairs until we have \emph{batch size} number of them and then we send them to the training logic as a new composite batch.
+
+To be able to batch together the training images, they need to have the same spatial dimensions. For this reason we do not train on the entire music pages, but instead on tiles of fixed size. The size is set to 512 pixels wide and 256 pixels high for all experiments. We took inspiration for this from the article by [CITE Hajič]. The tiles are sampled from the music page at random locations and the number of tiles is equal to the area of the page, divided by the area of the tile. The article also employs a technique called oversampling, where a tile is sampled up to five times if it contains no pixel of the target segmentation class. This technique helps with training on rare symbols (e.g. clefs), where most tiles would contain no instance of the target class. Our training logic also implements this oversampling technique.
+
+The semantic segmentation task is usually framed as a pixelwise classification problem. For this reason we use the pixelwise binary crossentropy loss function [CITE DL BOOK]. To make the loss value \emph{batch size} and \emph{tile size} invariant, we compute the average over all pixels in a batch. This allows us to sum the supervised and unsupervised losses, as they are of a similar magnitude, regardles of the number of labeled and unlabeled training pairs used. The reconstruction task will also use the same pixelwise binary crossentropy loss function, since the reconstruction of a single pixel can be understood as the probability of the pixel being black.
+
+We use the Adam optimizer for all experiments, with learning rate $0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$ and $\varepsilon = 10^{-7}$ [CITE ADAM]. Also for all experiments, we use the validation dataset to assess the performance of the model and train for as long as it is improving. Any evaluation of any trained model is performed by the model with the optimal validation dataset performance (unless the entire validation training curve is shown).
 
 
 \section{Evaluation Metrics}

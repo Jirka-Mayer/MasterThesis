@@ -338,8 +338,8 @@ Another difference to the previous experiment is that the ratio of labeled to un
 
 \begin{figure}[p]
     \centering
-    \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-dropout.pdf}
-    \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-dropout-smooth.pdf}
+    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/supervised.pdf}
+    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/semisupervised.pdf}
     \caption{Lorem ipsum dolor. TODO: the two improvements charts}
     \label{fig:CvcImprovements}
 \end{figure}
@@ -359,8 +359,6 @@ Conclusions can be drawn from these observations:
     \item The addition of unlabeled data can be used as a regularization technique. This is evident from the fact that training curves get much smoother as we add unlabeled data. A~regularization effect is also described in the corresponding literature [CITE SSL overview].
     \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. [TODO: expand on this further and show reconstruction visualizations - they learn simple shapes, not abstract objects]
 \end{itemize}
-
-% TODO: evaluate best models of SUP and SEMISUP, maybe they differ in test score? Probbably not.
 
 
 \section{Knowledge Transfer}

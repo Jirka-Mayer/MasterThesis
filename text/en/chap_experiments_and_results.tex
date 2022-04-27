@@ -180,9 +180,15 @@ In the beginning we tried downscaling CVC-MUSCIMA with area interpolation method
 \section{Noise Generation}
 \label{sec:NoiseGeneration}
 
-% - why large noise -> to learn representaions?
-% - mention cuneiform article from ICDAR - GAN reconstruction
-% - noise generation and parameters
+Typical denoising autoencoders are used either for removing noise from existing images (say, an overlayed text, sensor noise, or aliasing artifacts) or for learning abstract features [CITE]. If noise is sufficiently fine, as to not obstruct the high-level structure of the image, the autoencoder can learn this high-level structure in an unsupervised way. This setup can be used for feature extraction, similar to how variational autoencoders are used [CITE VAE].
+
+Our goal is to leverage this training scheme to force our U-Net model to learn high-level representations. We chose to use noise in the form of dropping out parts of the input image -- setting the image pixels to zero. The parameter that specifies the percentage of zeroed-out image area is called \emph{noise dropout}.
+
+We could decide for each pixel independently, whether it should be dropped, but that would produce a very fine noise. We belive that such a noise would not force the model to learn large symbols, as they are unnecessary for removing the noise. Therefore we chose to increase the resolution of the noise to form a square grid, where one square covers approximately two staff spaces. Such a noise drops out large enough sections, that simple operations like dilation will not fix it, while at the same time being small enough that the number of plausible reconstructions within the dropped space is reasonably limited. An extreme situation would be dropping the entire input image, but there the space of possible reconstructions would be so large, that it would be impossible for the model to guess the correct one (even among the space of plausible reconstructions).
+
+% TODO: image, comparing various noise sizes
+
+We got the idea of dropping image squares after reading the article by [CITE CUNEIFORMS]. The authors of the article present a method for reconstructing parts of an input image using a generative adversarial network. Their goal is to create synthetic training data for the task of cuneiform sign recognition.
 
 
 \section{Training}

@@ -63,3 +63,9 @@ https://arxiv.org/abs/1412.6980
 
 Object detection metrics:
 https://github.com/rafaelpadilla/Object-Detection-Metrics
+
+Cuneiforms:
+https://link.springer.com/chapter/10.1007/978-3-030-86549-8_5
+
+Stacked denoising autoencoders:
+https://arxiv.org/pdf/1606.08921.pdf

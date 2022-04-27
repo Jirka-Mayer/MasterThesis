@@ -60,3 +60,6 @@ https://github.com/wohlert/semi-supervised-pytorch
 
 Adam (Kingma et al):
 https://arxiv.org/abs/1412.6980
+
+Object detection metrics:
+https://github.com/rafaelpadilla/Object-Detection-Metrics

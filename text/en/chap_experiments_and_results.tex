@@ -324,7 +324,7 @@ This experiment attempts to address issues of the previous experiment:
     \item small dataset
 \end{itemize}
 
-In the chapter \ref{chap:CurrentStateOfOMR} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA [CITE] and MUSCIMA++ [CITE]. The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
+In section \ref{sec:Datasets} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA [CITE] and MUSCIMA++ [CITE]. The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
 
 Hajič jr. and Dorfer [CITE 1, 2] have used the U-Net architecture [CITE] for segmentation and they trained it on the MUSCIMA++ dataset. Their results are very impressive. Being able to further build on their work and improving the model by utilizing unlabeled data from CVC-MUSCIMA would be very helpful for the field of OMR. This experiment attempts to do just that.
 
@@ -357,21 +357,40 @@ Conclusions can be drawn from these observations:
 \begin{itemize}
     \item The reconstruction and segmentation tasks clearly compete for model capacity. The performance drop of adding unlabeled data decreases, as the model capacity increases.
     \item The addition of unlabeled data can be used as a regularization technique. This is evident from the fact that training curves get much smoother as we add unlabeled data. A~regularization effect is also described in the corresponding literature [CITE SSL overview].
-    \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. [TODO: expand on this further and show reconstruction visualizations - they learn simple shapes, not abstract objects]
+    \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. But from section \ref{sec:NoiseParameters} we know that some abstract representations are learned. Maybe these learned representations are not used during segmentation.
 \end{itemize}
 
 
 \section{Knowledge Transfer}
 \label{sec:KnowledgeTransfer}
 
-TODO: knowledge transfer experiment
+The goal of this experiment is to train a model to transfer a learned task from one domain onto another in a semi-supervised manner. The goal is to perform semantic segmentation on handwritten music, while providing labels only for printed music. We use the DeepScores v2 dataset (\cite{DeepScores}) as the source of labeled printed music and the MUSCIMA++ dataset (\cite{MuscimaPP}) as the source of unlabeled handwritten music. Validation is performed on a set of 20 pages from the MUSCIMA++ dataset. We use the remaining 99 pages for unsupervised training. To keep the ratio of labeled to unlabeled data at a reasonable value of 1:5, we use 20 labeled pages from the DeepScores dataset. We also train a supervised baseline with no unlabeled pages to compare against.
+
+We first tried performing notehead segmentation, like in the previous experiments, but the results were extremely noisy and no meaningful difference could be seen. The pixelwise F1 score varied from 0.2 to 0.6 even between different runs of the supervised baseline (with dataset seed fixed). Semi-supervised runs were equally noisy and within the same range. When inspecting the infered segmentation masks, we concluded that handwritten noteheads are overly varied and have very different appearance compared to printed noteheads. The trained models could only reliably segment noteheads of writer 9, whose noteheads are very similar to printed ones.
+
+Informed by this failure, we choose to segment stafflines. Firstly, because they are very easy geometric shapes to understand. Stafflines are the first objects that a model learns to repair during reconstruction and does so with great precision. Secondly, thier visual appearance in the printed and handwritten datasets is very similar, but not identical. A challenge is still being presented (handwritten stafflines are much thinner and the surrounding symbols are more varied).
+
+We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed noteheads attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in figure \ref{fig:StafflineTransfer}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/04-staffline-transfer/transfer.pdf}
-    \caption{TODO lorem ipsum}
+    \caption{Handwritten staffline segmentation F1 score, when training on labeled printed music and unlabeled handwritten music.}
     \label{fig:StafflineTransfer}
 \end{figure}
+
+During the first 7 epochs, both variants perform equally well, however at about the tenth epoch all fully-supervised models start overfitting and their F1 score drops to very low numbers. Interestingly, all the semi-supervised models stay at a comparably high score. They seem to plateau, instead of overfitting. This is a clear example of how the unsupervised data can regularize the training and prevent the model from overfitting. Unfortunately, if take the best checkpoints of both variants, we see that both variants perform equally well. The semi-supervised model does not pass the supervised baseline.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/04-staffline-transfer/staffline-removal.png}
+    \caption{Handwritten stafflines removed by the model trained on labeled printed music and unlabeled handwritten music. Tiny speckles in the image are the result of imperfect segmentation.}
+    \label{fig:StafflineRemoval}
+\end{figure}
+
+Evaluating the top semi-supervised model on the MUSCIMA++ test set (writer-independent) gives us a pixelwise F1 score of 97.70\%. The same model peaks on the validation set at 97.81\%. 
+
+We can compare ourselves to an article by \cite{StafflineDetection} focusing on staff-removal task. The article presents a convolutional network, trained in a supervised way on a dataset extracted from the CVC-MUSCIMA dataset (\cite{CvcMuscima}). The table 4 in the article provides their pixelwise F1 score on undistorted images (99.25\%), together with other older approaches (97.59\% up to 98.51\%). We can see that our results are in a range comparable to older approaches, which is impressive, since we did not use a single annotated handwritten image. Our annotated training images were purely digitally constructed, without any attempts at mimicking the handwritten style.
 
 
 \section{Understanding Hyperparameters}

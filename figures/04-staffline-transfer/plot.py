@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 import shutil
+import cv2
 
 
 if len(sys.argv) >= 2 and sys.argv[1] == "pull":
@@ -62,3 +63,28 @@ plt.grid(axis="y")
 plt.title("Staffline segmentation transfer")
 plt.savefig("transfer.pdf")
 plt.close()
+
+
+#####################
+# Staffline removal #
+#####################
+
+raw_img = cv2.imread("eval-0013.png", 0)
+raw_img = raw_img / 255
+total_h, total_w = raw_img.shape
+w = (total_w - 2) // 3
+input_img = raw_img[:,0:w]
+segmentation_img = raw_img[:,w+1:w+1+w]
+segmentation_img = (segmentation_img > 0.5).astype(np.float32) # binarize
+removed_img = input_img * (1 - segmentation_img)
+
+cv2.imwrite("staffline-removal.png", (1 - removed_img[700:1400,1400:2400]) * 255)
+
+# plt.imshow(np.dstack([1 - removed_img]*3))
+# plt.xlim(left=1400, right=2400)
+# plt.ylim(bottom=1450, top=750)
+# plt.axis("off")
+# #plt.title("Removed stafflines by knowledge transfer")
+# plt.tight_layout()
+# plt.savefig("staffline-removal.pdf")
+# plt.close()

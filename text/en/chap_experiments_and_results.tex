@@ -366,6 +366,13 @@ Conclusions can be drawn from these observations:
 
 TODO: knowledge transfer experiment
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/04-staffline-transfer/transfer.pdf}
+    \caption{TODO lorem ipsum}
+    \label{fig:StafflineTransfer}
+\end{figure}
+
 
 \section{Understanding Hyperparameters}
 \label{sec:UnderstandingHyperparameters}
@@ -401,6 +408,16 @@ From all this we conclude that dropout should be disabled by default.
 
 \subsection{Skip Connections}
 \label{sec:SkipConnections}
+
+In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection oepration:
+
+\begin{itemize}
+    \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
+    \item gated -- skip connections are enabled for supervised task (traitraining and inference) and disabled for reconstruction task (training and inference)
+    \item none -- skip connections are always disabled, like in a typical autoencoder
+\end{itemize}
+
+TODO: continue here...
 
 % chart of the three
 % gated works better than none, and solid are better still

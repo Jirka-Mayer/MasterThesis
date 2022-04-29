@@ -1,30 +1,32 @@
 \chapter{Experiments and Results}
 \label{chap:ExperimentsAndResults}
 
-TODO: quick chapter overview
+This chapter starts by describing the motivation behind the chosen architecture and all details regarding its setup. We follow by listing all used datasets, their role in our experiments and challenges arising from their combination. Next section is dedicated to the generation of noise used during unsupervised training. Then we describe all the details of the training process and the metrics used for evaluation. A detailed analysis is provided for each individual hyperparameter and its role in the training process. Finally, each of the last three sections presents an experiment we performed:
 
-\begin{code}
-$ python3 main.py unet train --val_pages 123 ...
-\end{code}
+\begin{itemize}
+    \item \ref{sec:SemisupervisedImprovements}: Measure the impact of adding different amounts of unsupervised data during training.
+    \item \ref{sec:UtilizingCvcMuscima}: Measure the impact of model size (number of synapses) on the task performance, when training on all available handwritten data.
+    \item \ref{sec:KnowledgeTransfer}: Attempt to learn the segmentation task on printed music and evaluate it on handwritten music, while using unlabeled handwritten music as regularization.
+\end{itemize}
 
 
 \section{Architecture}
 \label{sec:Architecture}
 
-In the \emph{generative model} approach to semi-supervised learning, one usually starts with a model that can be trained in the unsupervised manner (either an autoencoder or a generative adversarial network [CITE, CITE]) and then extends it to also perform the supervised task. For example, when starting with an autoencoder, one can use the encoder part as a dimensionality reduction mechanism and then build a supervised classification network that classifies the learned embeddings [CITE].
+In the \emph{generative model} approach to semi-supervised learning, one usually starts with a model that can be trained in the unsupervised manner (either an autoencoder or a generative adversarial network; \cite{AutoencodersOverview}, \cite{GAN}) and then extends it to also perform the supervised task. For example, when starting with an autoencoder, one can use the encoder part as a dimensionality reduction mechanism and then build a supervised classification network that classifies the learned embeddings (\cite{KingmaSslVae}).
 
-In our context of music recognition, we are highly motivated to build on top of the U-Net architecture [CITE] (figure \ref{fig:ArchitectureCombined}). It has first been used for biomedical image segmentation, however its superiority for object detection in music recognition has clearly been demonstrated by Pacha et al. [CITE].
+In our context of music recognition, we are highly motivated to build on top of the U-Net architecture (\cite{UNet}) (figure \ref{fig:ArchitectureCombined}). It has first been used for biomedical image segmentation, however its superiority for object detection in music recognition has been clearly demonstrated by \cite{PachaBaseline}.
 
 The architecture can be viewed as a fully convolutional autoencoder with residual (skip) connections added between the encoder and decoder on every resolution level. The U-Net encoder is a typical fully-convolutional encoder that gradually reduces image dimensions, while increasing the channel count. Such an architecture is able to learn abstract representations of symbols present in the input image. The decoder then tries to go from these abstract representations back to specific ones, while at the same time modifying the reconstruction to fit the learned segmentation task. The core idea behind this architecture is that the decoder can utilize skip connections during upsampling, thereby producing a pixel-perfect segmentation.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../img/architecture-complete.pdf}
-    \caption{TODO}
+    \caption{Block diagram, depicting the used architecture. It has 4 levels, with gated skip connections on each level. The network is forked after the second to last layer to provide separate segmentation and reconstruction outputs. Detailed explanation of each block is provided in figure \ref{fig:ArchitecturePieces}.}
     \label{fig:ArchitectureCombined}
 \end{figure}
 
-We choose to share the entire U-Net model for both the supervised and unsupervised tasks. The two tasks are differentiated only at the very last layer. The original U-Net architecture ends with a 1x1 convolution layer with sigmoid activation. It can be viewed as a pixelwise softmax for two output classes of a typical classification model. We decided to fork the architecture here, having one sigmoid convolution for the supervised segmentation task and one for the unsupervised reconstruction task.
+We choose to share the entire U-Net model for both the supervised and unsupervised tasks. The two tasks are differentiated only at the very last layer. The original U-Net architecture ends with a 1x1 convolution layer with sigmoid activation. It can be viewed as a pixelwise softmax for two output classes (like in a typical classification architecture). We decided to fork the architecture here, having one sigmoid convolution for the supervised segmentation task and one for the unsupervised reconstruction task.
 
 The supervised task can be trained in almost the same way as the the original U-Net archtiecture:
 
@@ -36,7 +38,9 @@ The supervised task can be trained in almost the same way as the the original U-
     \item An optimizer uses computed gradients to update model parameters.
 \end{itemize}
 
-The unsupervised task could be trained in the same way, using the other output branch of the model. This would work for a typical autoencoder, but since the U-Net architecture contains skip connections, the model could learn an identity function without using any of the abstraction-learning layers. The goal of unsupervised learning is learning these abstract features, so this training scheme is infeasible in our context.
+The unsupervised task can be trained in the same way, using the other output branch of the model. The model would receive an image on the input and would be trained to produce an identical image on the reconstruction output. This setup requires no labels, only the music images.
+
+The unsupervised training, as described so far, would work for a typical autoencoder, but since the U-Net architecture contains skip connections, the model could learn an identity function without using any of the abstraction-learning layers. The goal of unsupervised learning is learning these abstract features, so this straightforawrd training scheme is infeasible in our context.
 
 We propose two ways of overcoming this challenge:
 
@@ -45,24 +49,26 @@ We propose two ways of overcoming this challenge:
     \item denoising
 \end{itemize}
 
-One option is to disable skip connections during reconstruction training and keep them enabled during segmentation training. This should force the model to learn abstract features during reconstruction, while also being able to utilize skip connections during segmentation. This scheme performs much better than a typical autoencoder without any skip connections, but is still outperformed by the next proposed scheme (see detailed comparison in section \ref{sec:SkipConnections}).
+One option is to disable skip connections during reconstruction training and keep them enabled during segmentation training. This should force the model to learn abstract features during reconstruction, while also being able to utilize skip connections during segmentation.
 
-The second option is to add some noise to the input image during reconstruction training. The model would learn to not only reconstruct the input image, but also to remove the added noise. We took inspiration from denoising autoencoders [CITE AUTOENCODERS]. The difficult part is designing the noise function such that it would cause the model to learn abstract representaions (see section \ref{sec:NoiseGeneration}).
+This gated scheme performs better than a plain autoencoder without any skip connections, but the experiment in section \ref{sec:SkipConnections} suggests that having skip connections permanently enabled works better still. Despite this, we choose to use gated skip connections for reasons explained in that section. We combine this gating with the second technique of adding noise.
+
+The denoising option refers to the process of adding noise to the input image, when training the reconstruction task. The model learns to not only reconstruct the input image, but also to remove the added noise. We took inspiration from denoising autoencoders (\cite{StackedDenoisingAutoencoders}). The difficult part is designing the noise function such that it would cause the model to learn abstract representations (see section \ref{sec:NoiseGeneration}).
 
 We consider the described scheme for unsupervised U-Net training to be the main contribution of this thesis. The proposed experiments try to assess the viability of the scheme in the context of semi-supervised learning.
 
-Both the segmentation and reconstruction tasks are trained jointly on composite batches and a single composite loss function. A single optimizer step is used to update model parameters for both tasks somultaneously. The process is described in detail in section \ref{sec:Training}.
+Both the segmentation and reconstruction tasks are trained jointly on composite batches and a single composite loss function. A single optimizer step is used to update model parameters for both tasks somultaneously. The specifics of combining supervised and unsupervised training are described later in section \ref{sec:Training}.
 
 The last sigmoid layers output images with only one channel. For the reconstruction output, this data is interpreted as a grayscale image. For the segmentation output, it represents the probability the model assigns to each pixel of being in the target class. This means that the model can learn to segment only one symbol class.
 
-Hajič et al. [CITE] have explored the option of having multiple segmentation output channels. The hypothesis is that having the model learn multiple classes would improve its accuracy, since some internal representations can be shared. An added advantage is the reduced inference time as multiple segmentation masks can be infered in a single pass. Such a training however introduces problems related to unbalanced class distribution in the training data. Even if these can be overcome, their results suggest minimal accuracy benefits and a risk of decreasing accuracy in some cases.
+\cite{HajicEtAl} have explored the option of having multiple segmentation output channels. The hypothesis is that having the model learn multiple classes would improve its accuracy, since some internal representations can be shared. An added advantage is the reduced inference time as multiple segmentation masks can be infered in a single pass. Such a training however introduces problems related to unbalanced class distribution in the training data. Even if these can be overcome, their results suggest minimal accuracy benefits and a risk of decreasing accuracy in some cases.
 
-Despite the fact that our experiment source code lets us easily train multiple classes, we choose not to explore this path as we are interested in the semi-supervised effects only.
+Despite the fact that our experiments source code lets us easily train multiple classes, we choose not to explore this path as we are interested in the semi-supervised effects only.
 
 \begin{figure}[p]
     \centering
     \includegraphics[width=140mm]{../img/architecture-pieces.pdf}
-    \caption{TODO}
+    \caption{A recursive block schema of the used architecture. When training and infering segmentation, the input images are cropped directly from the given dataset. When training reconstruction, the input images are overlayed with large, tiled noise that zeroes-out some pixels.}
     \label{fig:ArchitecturePieces}
 \end{figure}
 
@@ -70,7 +76,7 @@ The figure \ref{fig:ArchitecturePieces} contains a recursive block diagram of ou
 
 Each level of the network begins and ends with a convolutional block (CB). It consists of two identical 3x3 convolutional layers with an optional dropout layer in between them. Both convolutional blocks on the same level output the same number of feature channels. The number of feature channels is dictated by a hyperparameter we call \emph{inner features}. If the network has 4 inner features, the zero-th level convolutions output 4 feature channels. Each successive level then has twice as many feature channels as the one above it (e.g. 4, 8, 16, 32). The figure \ref{fig:ArchitectureCombined} contains image dimensions and channel counts for each edge in the network. The image dimensions are taken with respect to an input image tile of size 512x256.
 
-The downsampling block is implemented as a 2D max pooling layer [CITE]. The number of feature channels is preserved. If we track the feature count through the encoder, we always first double the number of channels in the convolutional block and then reduce the spatial dimensionality in half in the downsampling block. This way the model can learn to extract higher-level features, before the spatial resolution is lowered. Since the image is two dimensional, halving the resolution shrinks the number of pixels to one quarter. Combined with the doubling of channel count, one encoder level effectively discards half of the image data. This acts as a bottleneck, forcing the network to learn relevant high-level representations.
+The downsampling block is implemented as a 2D max pooling layer (\cite{DeepLearningBook}). The number of feature channels is preserved. If we track the feature count through the encoder, we always first double the number of channels in the convolutional block and then reduce the spatial dimensionality in half in the downsampling block. This way the model can learn to extract higher-level features, before the spatial resolution is lowered. Since the image is two dimensional, halving the resolution shrinks the number of pixels to one quarter. Combined with the doubling of channel count, one encoder level effectively discards half of the image data. This acts as a bottleneck, forcing the network to learn relevant high-level representations.
 
 The upsampling block has to perform two operations:
 
@@ -81,11 +87,14 @@ The upsampling block has to perform two operations:
 
 The resolution increase is performed by nearest neighbour interpolation (each pixel is copied to form a 2x2 region of the output image). The reduction in channel count is performed by a 1x1 convolutional layer, which can be trained to select or combine specific input channels. The upsampling output image may also be padded by zeros, if the desired output resolution is not even (we need to exactly match the resolution of the skip connection).
 
-The gate on the skip connection is implemented as a multiplication by one or zero. This also causes any back-propagating gradients to be zeroed out, when the gate is closed. We took inspiration for the gating implementation from LSTM and GRU cells used in recurrent neural networks [CITE, CIRE].
+The gate on the skip connection is implemented as a multiplication by one or zero. This also causes any back-propagating gradients to be zeroed out, when the gate is closed. We took inspiration for the gating implementation from LSTM and GRU cells used in recurrent neural networks (\cite{LSTM}, \cite{GRU}).
 
-The output of the upsampling block and the skip connection is merged in an elementwise sum operation. The original U-Net paper uses concatenation [CITE], however Dorfer et al. have shown that using a sum instead speeds up training, while having minimal impact on model accuracy [CITE].
+The output of the upsampling block and the skip connection is merged in an elementwise sum operation. The original U-Net paper uses concatenation (\cite{UNet}), however \cite{DorferEtAl} have shown that using a sum instead speeds up training, while having minimal impact on model accuracy.
 
-In all layers (except for the two output sigmoid layers) the exponential linear unit (ELU) activation function is used. The reasons for this are described in section \ref{sec:ActivationFunction}.
+In all layers (except for the two output sigmoid layers) the exponential linear unit (ELU) activation function is used. Reasons for this are described in section \ref{sec:ActivationFunction}.
+
+
+% =============== REFACTORED UP TO HERE ===============
 
 
 \section{Datasets}
@@ -248,6 +257,136 @@ The confusion matrix values are computed over all pixels of the the entire (vali
 It is important to note, that the two articles regarding music symbol detection ([CITE hajič, dorfer]) use object detection F1 score, which is not directly comparable to our pixelwise F1 score.
 
 
+\section{Understanding Hyperparameters}
+\label{sec:UnderstandingHyperparameters}
+
+
+\subsection{Batch Size}
+\label{sec:BatchSize}
+
+In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower [CITE DL BOOK]. Since our model is fully cconvolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If the tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does [CITE]).
+
+Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
+
+TODO: figure with the failing training (bs=2,ratio=1:10)
+
+An example of such a failing training can be seen in figure TODO???. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
+
+Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
+
+
+\subsection{Dropout}
+\label{sec:Dropout}
+
+We introduced dropout [CITE] when training on small datasets (section \ref{sec:SemisupervisedImprovements}). The training was so noisy, that it was difficult to infer any measurable differences between runs. Therefore we used dropout as a mean to stabilize the training. The model performace also sligtly increased in this setting.
+
+When we train on larger datasets, the training is no longer unstable and dropout is not needed (section \ref{sec:UtilizingCvcMuscima}). In fact, it causes the training process to converge much slower (2x or more) and it does not perform any better.
+
+Both the original U-Net article [CITE] and the article by Hajič jr. et al. [CITE] use the U-Net architecture without any dropout. In fact, an article by Thompson et al. [CITE] argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
+
+It may be the case, that using batch normalization instead or dropout (like Hajič jr. et al. [CITE]) has the same effect of regularizing the network. However our goal is not to find the optimal architecture, but to measure the impact of unsupervised data. For that reason we did not explore this option.
+
+From all this we conclude that dropout should be disabled by default.
+
+
+\subsection{Skip Connections}
+\label{sec:SkipConnections}
+
+In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection operation:
+
+\begin{itemize}
+    \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
+    \item gated -- skip connections are enabled for supervised task (traitraining and inference) and disabled for reconstruction task (training and inference)
+    \item none -- skip connections are always disabled, like in a typical autoencoder
+\end{itemize}
+
+The motivation behind gating skip connections is to compare the U-Net architecture (\cite{UNet}) to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
+
+We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. The training curves are shown in figure \ref{fig:SkipConnections}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/05-skip-connections/skip.pdf}
+    \caption{Comparing various skip connection modes with a model from experiment \ref{sec:UtilizingCvcMuscima} (16 inner features, semi-supervised). The permanent skip connection mode performs the best, although all runs are below the supervised baseline. The order could be different, should the baseline be exceeded.}
+    \label{fig:SkipConnections}
+\end{figure}
+
+We can see that solid and gated modes have the best performance. The model with no skip connections is clearly worse at the segmentation task. This result validates the superiority of the U-Net architecture for semantic segmentation.
+
+The gated mode seems to perform worse than the solid one. Despite this, we chose to train all the experiments in this gated mode as we belive it helps the model to learn representations during unsupervised training.
+
+We have to point out, that all of our semi-supervised experiments never exceeded their supervised baselines. This means that bringing the model closer to its supervised setting (using solid skip connections) should increase its performance, because we are bringing it closer to the baseline. For this reason we cannot conclude, what the best skip connection mode would be, if we managed to exceed the baseline. It is possible the order of modes would get reversed. This is another reason why we chose to use gated connections, despite not being optimal in this experiment.
+
+
+\subsection{Unsupervised Loss Weight}
+\label{sec:UnsupervisedLossWeight}
+
+This parameter determines the relative magnitude of the segmentation and the reconstruction loss. We first though this parameter would have significant impact in the training and would need to be tuned carefully. It turned out not to be the case. We ended up setting it 1 and not optimizing it.
+
+Varying this parameter from 10 to 0.1 has minimal impact on model performance. When we examined the segmentation masks and reconstruction images as they evolve throughout the training process, we discovered that the primary impact is the change of speed of learning each task. When the parameter is 10, the reconstruction task is learned quickly and segmentation task is learned slowly. When we set it 0.1 the situation is reversed. If we let the training covnerge, it ends up learning both tasks equally well.
+
+Interesting behaviour happens only at the extreme. When the parameter is set to zero, the reconstruction task produces no gradients and the training collapses to the fully-supervised regime. We performed an experiment that verified this behaviour.
+
+
+\subsection{Noise Parameters}
+\label{sec:NoiseParameters}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=140mm]{../../figures/06-noise/noise-size.pdf}
+    \caption{Comparing reconstructions performed by models trained with small and large noise tiles. (A) Low-level reconstructions, make no sense in the musical context. (B) Visible edges of the dropped tiles in the reconstruction. (C) High-level reconstruction with staffliens and stems visible. (D) Forgotten notehead.}
+    \label{fig:NoiseSize}
+\end{figure}
+
+There are two major nosie parameters that can be varied:
+
+\begin{itemize}
+    \item Noise resolution (size of dropout squares)
+    \item Noise dropout ratio (ratio of erased input pixels)
+\end{itemize}
+
+In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution. We belive large tiles force the model to learn larger sybmols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
+
+The first two images show, how the model can learn to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped, as seen in the second pair of images. We can see edges of the noise tiles still visible in the reconstruction, reconstructed stafflines fade when close to other symbols and most reconstructions are based on relatively low-level features. The beam corner is extended upwards, which is reasonable in the sense of drawing straight lines, but not in any musical sense. Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
+
+We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of figure \ref{fig:NoiseSize}.
+
+
+\subsection{Activation Function}
+\label{sec:ActivationFunction}
+
+We first used ReLU activation function (rectified linear unit) [CITE] in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article [CITE]. However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) [CITE] solved these issues. We took inspiration from Hajič jr. et al. [CITE], who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/functions.pdf}
+    \caption{Visualization of the explored activation functions. ReLU is flat in negative values and therefore has no gradient there. ELU has exponentially decaying gradient and leaky ReLU has a constant gradient. The parameter for the displayed leaky ReLU is 0.1 to make its shape more apparent.}
+    \label{fig:ActivationFunctions}
+\end{figure}
+
+The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem [CITE]. When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because the target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/progression.pdf}
+    \caption{The training process starts by learning to output a mostly black image, which probably causes the model to overshoot during the fully-supervised training and get stuck in the "dying ReLU" problem.}
+    \label{fig:ActivationTrainingProgression}
+\end{figure}
+
+Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that the unlabeled data acts as regularization, damping any extreme gradients, and stabilizing the training.
+
+We also tried using the leaky ReLU function [CITE] with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/03-activation-function/performance.pdf}
+    \caption{An experiment from section \ref{sec:UtilizingCvcMuscima} with 8 inner features, trained in fully-supervised mode with various activation functions. All runs show the same performance.}
+    \label{fig:ActivationFunctionPerformances}
+\end{figure}
+
+We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of Dorfer. et al. [CITE] (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).
+
+
 \section{Semi-supervised Improvements}
 \label{sec:SemisupervisedImprovements}
 
@@ -392,132 +531,3 @@ Evaluating the top semi-supervised model on the MUSCIMA++ test set (writer-indep
 
 We can compare ourselves to an article by \cite{StafflineDetection} focusing on staff-removal task. The article presents a convolutional network, trained in a supervised way on a dataset extracted from the CVC-MUSCIMA dataset (\cite{CvcMuscima}). The table 4 in the article provides their pixelwise F1 score on undistorted images (99.25\%), together with other older approaches (97.59\% up to 98.51\%). We can see that our results are in a range comparable to older approaches, which is impressive, since we did not use a single annotated handwritten image. Our annotated training images were purely digitally constructed, without any attempts at mimicking the handwritten style.
 
-
-\section{Understanding Hyperparameters}
-\label{sec:UnderstandingHyperparameters}
-
-
-\subsection{Batch Size}
-\label{sec:BatchSize}
-
-In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower [CITE DL BOOK]. Since our model is fully cconvolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If the tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does [CITE]).
-
-Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
-
-TODO: figure with the failing training (bs=2,ratio=1:10)
-
-An example of such a failing training can be seen in figure TODO???. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
-
-Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
-
-
-\subsection{Dropout}
-\label{sec:Dropout}
-
-We introduced dropout [CITE] when training on small datasets (section \ref{sec:SemisupervisedImprovements}). The training was so noisy, that it was difficult to infer any measurable differences between runs. Therefore we used dropout as a mean to stabilize the training. The model performace also sligtly increased in this setting.
-
-When we train on larger datasets, the training is no longer unstable and dropout is not needed (section \ref{sec:UtilizingCvcMuscima}). In fact, it causes the training process to converge much slower (2x or more) and it does not perform any better.
-
-Both the original U-Net article [CITE] and the article by Hajič jr. et al. [CITE] use the U-Net architecture without any dropout. In fact, an article by Thompson et al. [CITE] argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
-
-It may be the case, that using batch normalization instead or dropout (like Hajič jr. et al. [CITE]) has the same effect of regularizing the network. However our goal is not to find the optimal architecture, but to measure the impact of unsupervised data. For that reason we did not explore this option.
-
-From all this we conclude that dropout should be disabled by default.
-
-
-\subsection{Skip Connections}
-\label{sec:SkipConnections}
-
-In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection operation:
-
-\begin{itemize}
-    \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
-    \item gated -- skip connections are enabled for supervised task (traitraining and inference) and disabled for reconstruction task (training and inference)
-    \item none -- skip connections are always disabled, like in a typical autoencoder
-\end{itemize}
-
-The motivation behind gating skip connections is to compare the U-Net architecture (\cite{UNet}) to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
-
-We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. The training curves are shown in figure \ref{fig:SkipConnections}.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=140mm]{../../figures/05-skip-connections/skip.pdf}
-    \caption{Comparing various skip connection modes with a model from experiment \ref{sec:UtilizingCvcMuscima} (16 inner features, semi-supervised). The permanent skip connection mode performs the best, although all runs are below the supervised baseline. The order could be different, should the baseline be exceeded.}
-    \label{fig:SkipConnections}
-\end{figure}
-
-We can see that solid and gated modes have the best performance. The model with no skip connections is clearly worse at the segmentation task. This result validates the superiority of the U-Net architecture for semantic segmentation.
-
-The gated mode seems to perform worse than the solid one. Despite this, we chose to train all the experiments in this gated mode as we belive it helps the model to learn representations during unsupervised training.
-
-We have to point out, that all of our semi-supervised experiments never exceeded their supervised baselines. This means that bringing the model closer to its supervised setting (using solid skip connections) should increase its performance, because we are bringing it closer to the baseline. For this reason we cannot conclude, what the best skip connection mode would be, if we managed to exceed the baseline. It is possible the order of modes would get reversed. This is another reason why we chose to use gated connections, despite not being optimal in this experiment.
-
-
-\subsection{Unsupervised Loss Weight}
-\label{sec:UnsupervisedLossWeight}
-
-This parameter determines the relative magnitude of the segmentation and the reconstruction loss. We first though this parameter would have significant impact in the training and would need to be tuned carefully. It turned out not to be the case. We ended up setting it 1 and not optimizing it.
-
-Varying this parameter from 10 to 0.1 has minimal impact on model performance. When we examined the segmentation masks and reconstruction images as they evolve throughout the training process, we discovered that the primary impact is the change of speed of learning each task. When the parameter is 10, the reconstruction task is learned quickly and segmentation task is learned slowly. When we set it 0.1 the situation is reversed. If we let the training covnerge, it ends up learning both tasks equally well.
-
-Interesting behaviour happens only at the extreme. When the parameter is set to zero, the reconstruction task produces no gradients and the training collapses to the fully-supervised regime. We performed an experiment that verified this behaviour.
-
-
-\subsection{Noise Parameters}
-\label{sec:NoiseParameters}
-
-\begin{figure}[p]
-    \centering
-    \includegraphics[width=140mm]{../../figures/06-noise/noise-size.pdf}
-    \caption{Comparing reconstructions performed by models trained with small and large noise tiles. (A) Low-level reconstructions, make no sense in the musical context. (B) Visible edges of the dropped tiles in the reconstruction. (C) High-level reconstruction with staffliens and stems visible. (D) Forgotten notehead.}
-    \label{fig:NoiseSize}
-\end{figure}
-
-There are two major nosie parameters that can be varied:
-
-\begin{itemize}
-    \item Noise resolution (size of dropout squares)
-    \item Noise dropout ratio (ratio of erased input pixels)
-\end{itemize}
-
-In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution. We belive large tiles force the model to learn larger sybmols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
-
-The first two images show, how the model can learn to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped, as seen in the second pair of images. We can see edges of the noise tiles still visible in the reconstruction, reconstructed stafflines fade when close to other symbols and most reconstructions are based on relatively low-level features. The beam corner is extended upwards, which is reasonable in the sense of drawing straight lines, but not in any musical sense. Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
-
-We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of figure \ref{fig:NoiseSize}.
-
-
-\subsection{Activation Function}
-\label{sec:ActivationFunction}
-
-We first used ReLU activation function (rectified linear unit) [CITE] in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article [CITE]. However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) [CITE] solved these issues. We took inspiration from Hajič jr. et al. [CITE], who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=140mm]{../../figures/03-activation-function/functions.pdf}
-    \caption{Visualization of the explored activation functions. ReLU is flat in negative values and therefore has no gradient there. ELU has exponentially decaying gradient and leaky ReLU has a constant gradient. The parameter for the displayed leaky ReLU is 0.1 to make its shape more apparent.}
-    \label{fig:ActivationFunctions}
-\end{figure}
-
-The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem [CITE]. When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because the target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=140mm]{../../figures/03-activation-function/progression.pdf}
-    \caption{The training process starts by learning to output a mostly black image, which probably causes the model to overshoot during the fully-supervised training and get stuck in the "dying ReLU" problem.}
-    \label{fig:ActivationTrainingProgression}
-\end{figure}
-
-Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that the unlabeled data acts as regularization, damping any extreme gradients, and stabilizing the training.
-
-We also tried using the leaky ReLU function [CITE] with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=140mm]{../../figures/03-activation-function/performance.pdf}
-    \caption{An experiment from section \ref{sec:UtilizingCvcMuscima} with 8 inner features, trained in fully-supervised mode with various activation functions. All runs show the same performance.}
-    \label{fig:ActivationFunctionPerformances}
-\end{figure}
-
-We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of Dorfer. et al. [CITE] (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).

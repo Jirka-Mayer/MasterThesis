@@ -409,7 +409,7 @@ From all this we conclude that dropout should be disabled by default.
 \subsection{Skip Connections}
 \label{sec:SkipConnections}
 
-In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection oepration:
+In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection operation:
 
 \begin{itemize}
     \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
@@ -417,11 +417,22 @@ In the chapter about our architecture (\ref{sec:Architecture}) we described a me
     \item none -- skip connections are always disabled, like in a typical autoencoder
 \end{itemize}
 
-TODO: continue here...
+The motivation behind gating skip connections is to compare the U-Net architecture (\cite{UNet}) to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
 
-% chart of the three
-% gated works better than none, and solid are better still
-% however we are still below fully-supervised, maybe being over would change the order! Disclaim that!
+We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. The training curves are shown in figure \ref{fig:SkipConnections}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/05-skip-connections/skip.pdf}
+    \caption{Comparing various skip connection modes with a model from experiment \ref{sec:UtilizingCvcMuscima} (16 inner features, semi-supervised). The permanent skip connection mode performs the best, although all runs are below the supervised baseline. The order could be different, should the baseline be exceeded.}
+    \label{fig:SkipConnections}
+\end{figure}
+
+We can see that solid and gated modes have the best performance. The model with no skip connections is clearly worse at the segmentation task. This result validates the superiority of the U-Net architecture for semantic segmentation.
+
+The gated mode seems to perform worse than the solid one. Despite this, we chose to train all the experiments in this gated mode as we belive it helps the model to learn representations during unsupervised training.
+
+We have to point out, that all of our semi-supervised experiments never exceeded their supervised baselines. This means that bringing the model closer to its supervised setting (using solid skip connections) should increase its performance, because we are bringing it closer to the baseline. For this reason we cannot conclude, what the best skip connection mode would be, if we managed to exceed the baseline. It is possible the order of modes would get reversed. This is another reason why we chose to use gated connections, despite not being optimal in this experiment.
 
 
 \subsection{Unsupervised Loss Weight}

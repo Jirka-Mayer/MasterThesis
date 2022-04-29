@@ -448,9 +448,25 @@ Interesting behaviour happens only at the extreme. When the parameter is set to 
 \subsection{Noise Parameters}
 \label{sec:NoiseParameters}
 
-% noise dropout - for solid connection has little effect -> model learns sup easily
-% for gated connection we see an improvement -> model is forced to learn representations
-% that actually help it?
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=140mm]{../../figures/06-noise/noise-size.pdf}
+    \caption{Comparing reconstructions performed by models trained with small and large noise tiles. (A) Low-level reconstructions, make no sense in the musical context. (B) Visible edges of the dropped tiles in the reconstruction. (C) High-level reconstruction with staffliens and stems visible. (D) Forgotten notehead.}
+    \label{fig:NoiseSize}
+\end{figure}
+
+There are two major nosie parameters that can be varied:
+
+\begin{itemize}
+    \item Noise resolution (size of dropout squares)
+    \item Noise dropout ratio (ratio of erased input pixels)
+\end{itemize}
+
+In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution. We belive large tiles force the model to learn larger sybmols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
+
+The first two images show, how the model can learn to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped, as seen in the second pair of images. We can see edges of the noise tiles still visible in the reconstruction, reconstructed stafflines fade when close to other symbols and most reconstructions are based on relatively low-level features. The beam corner is extended upwards, which is reasonable in the sense of drawing straight lines, but not in any musical sense. Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
+
+We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of figure \ref{fig:NoiseSize}.
 
 
 \subsection{Activation Function}

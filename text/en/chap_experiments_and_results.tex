@@ -196,21 +196,26 @@ In the beginning we tried downscaling CVC-MUSCIMA with area interpolation method
 \section{Noise Generation}
 \label{sec:NoiseGeneration}
 
-Typical denoising autoencoders are used either for removing noise from existing images (say, an overlayed text, sensor noise, or aliasing artifacts) or for learning abstract features [CITE]. If noise is sufficiently fine, as to not obstruct the high-level structure of the image, the autoencoder can learn this high-level structure in an unsupervised way. This setup can be used for feature extraction, similar to how variational autoencoders are used [CITE VAE].
+Typical denoising autoencoders are used either for removing noise from existing images (say, an overlayed text, sensor noise, or aliasing artifacts) or for learning abstract features (\cite{StackedDenoisingAutoencoders}). If noise is sufficiently fine, as to not obstruct the high-level structure of the image, the autoencoder can learn this high-level structure in an unsupervised way. This setup can be used for feature extraction, similar to how variational autoencoders are used (\cite{VariationalAutoencoder}).
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/06-noise/noise-comparison.pdf}
+    \caption{Comparison of various noise sizes. Small nosie is easy for the model to remove and large noise leaves too many possibilites of reconstruction.}
+    \label{fig:NoiseComparison}
+\end{figure}
 
 Our goal is to leverage this training scheme to force our U-Net model to learn high-level representations. We chose to use noise in the form of dropping out parts of the input image -- setting the image pixels to zero. The parameter that specifies the percentage of zeroed-out image area is called \emph{noise dropout}.
 
-We could decide for each pixel independently, whether it should be dropped, but that would produce a very fine noise. We belive that such a noise would not force the model to learn large symbols, as they are unnecessary for removing the noise. Therefore we chose to increase the resolution of the noise to form a square grid, where one square covers approximately two staff spaces. Such a noise drops out large enough sections, that simple operations like dilation will not fix it, while at the same time being small enough that the number of plausible reconstructions within the dropped space is reasonably limited. An extreme situation would be dropping the entire input image, but there the space of possible reconstructions would be so large, that it would be impossible for the model to guess the correct one (even among the space of plausible reconstructions).
+We could decide for each pixel independently, whether it should be dropped, but that would produce a very fine noise. We belive that such a noise would not force the model to learn large symbols, as they are unnecessary for removing the noise. Therefore we chose to increase the resolution of the noise to form a square grid, where one square covers approximately two staff spaces. At this size, dropped regions are large enough, so that simple operations like dilation will not reconstruct them. These regions are also small enough that the number of plausible reconstructions within the dropped space is reasonably limited. An extreme situation would be dropping the entire input image, but there the space of possible reconstructions would be so large, that it would be impossible for the model to guess the correct one (even among the space of plausible reconstructions).
 
-% TODO: image, comparing various noise sizes
-
-We got the idea of dropping image squares after reading the article by [CITE CUNEIFORMS]. The authors of the article present a method for reconstructing parts of an input image using a generative adversarial network. Their goal is to create synthetic training data for the task of cuneiform sign recognition.
+We got the idea of dropping image squares after reading the article by \cite{Cuneiforms}. Authors of the article present a method for reconstructing parts of an input image using a generative adversarial network. Their goal is to create synthetic training data for the task of cuneiform sign recognition.
 
 
 \section{Training}
 \label{sec:Training}
 
-There are many options in how a semi-supervised generative model is trained. One option is to pre-train a model in the unsupervised mode and after that train a separate supervised part of the model [CITE KINGMA 2014]. Another option is to run the supervised training as a fine-tuning step after the unsupervised training, similar to the transfer learning approach [CITE TRANSFER LEARNING]. We chose to train both the supervised and the unsupervised tasks simultaneously, using a single, composite loss function.
+There are many ways in which a semi-supervised generative model can be trained. One option is to pre-train a model in the unsupervised mode and after that train a separate supervised part of the model (\cite{KingmaSslVae}). Another option is to run the supervised training as a fine-tuning step after the unsupervised training, similar to the transfer learning approach. We chose to train both the supervised and the unsupervised tasks simultaneously, using a single, composite loss function.
 
 One training step has the following structure:
 
@@ -233,27 +238,32 @@ The input to the training step is a composite batch of $(x_l, y_l)$ labeled data
 
 The number of labeled and unlabeled pairs in a composite batch differs and their ratio is related to the ratio of labeled to unlabeled data in the dataset. The hyperparameter \emph{batch size} dictates the total number of labeled and unlabeled pairs in one composite batch.
 
-% TODO: image that illustrates the batching process (input data -> batched data)
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/batching-process.pdf}
+    \caption{Illustration of how are supervised and unsupervised training pairs combined to form composite training batches.}
+    \label{fig:CompositeBatching}
+\end{figure}
 
 Composite batches are created by taking training pairs from the labeled and unlabeled splits of the dataset. When the next pair is taken, we either take it from the labeled or the unlabeled split, whichever is larger, with respect to their target ratio. For example, if their ratio in the whole dataset is 1:5 (labeled to unlabeled) and we have 10:201 remaining pairs, we will take an unlabeled pair next. We take pairs until we have \emph{batch size} number of them and then we send them to the training logic as a new composite batch.
 
-To be able to batch together the training images, they need to have the same spatial dimensions. For this reason we do not train on the entire music pages, but instead on tiles of fixed size. The size is set to 512 pixels wide and 256 pixels high for all experiments. We took inspiration for this from the article by [CITE Hajič]. The tiles are sampled from the music page at random locations and the number of tiles is equal to the area of the page, divided by the area of the tile. The article also employs a technique called oversampling, where a tile is sampled up to five times if it contains no pixel of the target segmentation class. This technique helps with training on rare symbols (e.g. clefs), where most tiles would contain no instance of the target class. Our training logic also implements this oversampling technique.
+To be able to batch together the training images, they need to have the same spatial dimensions. For this reason we do not train on the entire music pages, but instead on tiles of fixed size. The size is set to 512 pixels wide and 256 pixels high for all experiments. We took inspiration for this from the article by \cite{HajicEtAl}. Tiles are sampled from a music page at random locations and the number of tiles is equal to the area of the page, divided by the area of the tile. The article also employs a technique called oversampling, where a tile is sampled up to five times if it contains no pixel of the target segmentation class. This technique helps with training on rare symbols (e.g. clefs), where most tiles would contain no instance of the target class. Our training logic also implements this oversampling technique.
 
-The semantic segmentation task is usually framed as a pixelwise classification problem. For this reason we use the pixelwise binary crossentropy loss function [CITE DL BOOK]. To make the loss value \emph{batch size} and \emph{tile size} invariant, we compute the average over all pixels in a batch. This allows us to sum the supervised and unsupervised losses, as they are of a similar magnitude, regardles of the number of labeled and unlabeled training pairs used. The reconstruction task will also use the same pixelwise binary crossentropy loss function, since the reconstruction of a single pixel can be understood as the probability of the pixel being black.
+The semantic segmentation task is usually framed as a pixelwise classification problem. For this reason we use the pixelwise binary crossentropy loss function (\cite{DeepLearningBook}). To make the loss value invariant to changes in \emph{batch size} and \emph{tile size}, we compute the average over all pixels in a batch. This allows us to sum the supervised and unsupervised losses, as they are of a similar magnitude, regardles of the number of labeled and unlabeled training pairs used. The reconstruction task will also use the same pixelwise binary crossentropy loss function, since the reconstruction of a single pixel can be understood as the probability of that pixel being black.
 
-We use the Adam optimizer for all experiments, with learning rate $0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$ and $\varepsilon = 10^{-7}$ [CITE ADAM]. Also for all experiments, we use the validation dataset to assess the performance of the model and train for as long as it is improving. Any evaluation of any trained model is performed by the model with the optimal validation dataset performance (unless the entire validation training curve is shown).
+We use the Adam optimizer for all experiments, with learning rate $0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$ and $\varepsilon = 10^{-7}$ (\cite{AdamOptimizer}). Also, for all experiments, we use the validation dataset to assess the performance of the model and train for as long as it is improving. Any evaluation of any trained model is performed by the model with the optimal validation dataset performance (unless the entire validation training curve is shown).
 
 
 \section{Evaluation Metrics}
 \label{sec:EvaluationMetrics}
 
-Semantic segmentation is closely related to object detection and recognition. It is often performed as the first step from which object bounding boxes are computed. The segmentation output is first binarized by applying a threshold. Adjacent positive pixels are merged to form connected components, where each can then be enclosed in a bounding box. The described process is very basic and there are ways to improve it. A sligtly more advanced process in the context of notehead recognition is used in the article by [CITE DORFER].
+Semantic segmentation is closely related to object detection and recognition. It is often performed as the first step from which object bounding boxes are computed. The segmentation output is first binarized by applying a threshold. Adjacent positive pixels are merged to form connected components, where each can then be enclosed in a bounding box. The described process is very basic and there are ways to improve it. A sligtly more advanced process in the context of notehead recognition is used in the article by \cite{DorferEtAl}.
 
-There are many metrics that evaluate the correctness of predicted bounding boxes, comparing them to ground-truth bounding boxes. A metric called intersection over union (IOU) can be used to calculate the overlap of two bounding boxes. Setting a threshold on IOU and computing it between all pairs of predicted and ground-truth bounding boxes lets us compute the binary classification confusion matrix. From this matrix, additional metrics could be computed, such as precision, recall, and F1 score. By introducing a confidence level for each bounding box, or considering the performance over multiple classes, we get a large number of metrics that can be used to assess various aspects of the recognition. An article by [CITE PADILLA] provides an extensive comparison of all these metrics.
+There are many metrics that evaluate the correctness of predicted bounding boxes, comparing them to ground-truth bounding boxes. A metric called intersection over union (IOU) can be used to calculate the overlap of two bounding boxes. Setting a threshold on IOU and computing it between all pairs of predicted and ground-truth bounding boxes lets us compute the binary classification confusion matrix. From this matrix, additional metrics could be computed, such as precision, recall, and F1 score. By introducing a confidence level for each bounding box, or considering the performance over multiple classes, we get a large number of metrics that can be used to assess various aspects of the recognition. An article by \cite{PadillaMetrics} provides an extensive comparison of all these metrics.
 
 Even though these object detection metrics are more telling about the actual usefulness of the model (we care about detected objects, not pixels), we chose to evaluate our experiments directly at the pixel level. Adding these evaluation metrics adds unecesasry complexity to our experiments and it is not needed for our goal -- measuring the impact of unsupervised data.
 
-We chose to use the pixelwise F1 score at 0.5 thresholding. The F1 score is computed as the harmonic mean of precision and recall, so that it is high, when both precision and recall are high. It is computed using the following formula from the confusion matrix:
+We chose to use the pixelwise F1 score at 0.5 thresholding. The F1 score is computed as the harmonic mean of precision and recall, so that it is high, when both precision and recall are high. It is computed from the confusion matrix via the following formula:
 
 $$
     F1 = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}
@@ -261,7 +271,7 @@ $$
 
 The confusion matrix values are computed over all pixels of the the entire (validation) dataset.
 
-It is important to note, that the two articles regarding music symbol detection ([CITE hajič, dorfer]) use object detection F1 score, which is not directly comparable to our pixelwise F1 score.
+It is important to note, that the two articles regarding music symbol detection (\cite{HajicEtAl}, \cite{DorferEtAl}) use object detection F1 score, which is not directly comparable to our pixelwise F1 score.
 
 
 \section{Understanding Hyperparameters}

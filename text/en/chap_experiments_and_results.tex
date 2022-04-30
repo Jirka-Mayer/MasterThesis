@@ -281,13 +281,18 @@ It is important to note, that the two articles regarding music symbol detection 
 \subsection{Batch Size}
 \label{sec:BatchSize}
 
-In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower [CITE DL BOOK]. Since our model is fully cconvolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If the tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does [CITE]).
+In the deep learning field, it is known that having a small batch size makes the training fast and noisy, whereas a large batch size makes it more stable at the cost of being slower (\cite{DeepLearningBook}). Since our model is fully convolutional and we train it on image tiles of fixed size, we can consider the size of these tiles to be a parameter similar to batch size. It also regulates the amount of data used for gradient estimation. If these tiles are large enough, we can get away with batch size of 1 (this is what the original U-Net article does (\cite{UNet})).
 
-Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the single composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule isn't as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however if the imbalance becomes too severe, the training fails.
+Using such a small batch size is, however, not possible in our case. Our training process expects batches containing both labeled and unlabeled data. Batch size determines the total number of these two kinds of data items in the entire composite batch. The ratio of these two item types within the composite batch is dictated by the ratio within the whole dataset. So if our dataset has, for example, 1:5 labeled to unlabeled data, the batch size has to be at least 6. Otherwise we will start getting batches that contain only unlabeled data. This rule is not as strict, since the model would probably learn both tasks even if half of all batches were missing labeled data, however, if the imbalance becomes too severe, the training fails.
 
-TODO: figure with the failing training (bs=2,ratio=1:10)
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../../figures/07-small-batches/small-batches.pdf}
+    \caption{When batches are too small, some of them will lack labeled data and the model will fail to learn the supervised segmentation task. Instead, reconstruction output leaks into the segmentation output. This example has batch size 2 and 1:10 ratio.}
+    \label{fig:SmallBatches}
+\end{figure}
 
-An example of such a failing training can be seen in figure TODO???. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
+An example of such a failing training can be seen in figure \ref{fig:SmallBatches}. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
 
 Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
 
@@ -295,13 +300,13 @@ Since all of our experiments have training data ratios between 1:0 and 1:10, we 
 \subsection{Dropout}
 \label{sec:Dropout}
 
-We introduced dropout [CITE] when training on small datasets (section \ref{sec:SemisupervisedImprovements}). The training was so noisy, that it was difficult to infer any measurable differences between runs. Therefore we used dropout as a mean to stabilize the training. The model performace also sligtly increased in this setting.
+The network architecture, as described in section \ref{sec:Architecture}, contains a dropout layer within every convolutional block (\cite{Dropout}). We use the dropout when training on small datasets (experiment \ref{sec:SemisupervisedImprovements}), because the training is otherwise very noisy and it is difficult to infer any measurable differences between runs. We use dropout as a mean to stabilize the training, which in this setting also slightly increases model accuracy.
 
-When we train on larger datasets, the training is no longer unstable and dropout is not needed (section \ref{sec:UtilizingCvcMuscima}). In fact, it causes the training process to converge much slower (2x or more) and it does not perform any better.
+When training on larger datasets, the training is no longer unstable and dropout is not needed (experiments \ref{sec:UtilizingCvcMuscima} and \ref{sec:KnowledgeTransfer}). In fact, it causes the training process to converge much slower (2x or more) and it does not increase model accuracy anymore.
 
-Both the original U-Net article [CITE] and the article by Hajič jr. et al. [CITE] use the U-Net architecture without any dropout. In fact, an article by Thompson et al. [CITE] argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
+Both the original U-Net article (\cite{UNet}) and the article by \cite{HajicEtAl} use the U-Net architecture without any dropout. In fact, an article by \cite{DropoutOnConvolutions} argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
 
-It may be the case, that using batch normalization instead or dropout (like Hajič jr. et al. [CITE]) has the same effect of regularizing the network. However our goal is not to find the optimal architecture, but to measure the impact of unsupervised data. For that reason we did not explore this option.
+It may be the case, that using batch normalization instead or dropout (like \cite{HajicEtAl}) has the same effect of regularizing the network. However our goal is not to find the optimal architecture, but to measure the impact of unsupervised data. For that reason we did not explore this option further.
 
 From all this we conclude that dropout should be disabled by default.
 
@@ -309,17 +314,17 @@ From all this we conclude that dropout should be disabled by default.
 \subsection{Skip Connections}
 \label{sec:SkipConnections}
 
-In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We have devised three modes for skip connection operation:
+In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We present three modes for skip connections:
 
 \begin{itemize}
     \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
-    \item gated -- skip connections are enabled for supervised task (traitraining and inference) and disabled for reconstruction task (training and inference)
+    \item gated -- skip connections are enabled for the supervised task (traitraining and inference) and disabled for the reconstruction task (training and inference)
     \item none -- skip connections are always disabled, like in a typical autoencoder
 \end{itemize}
 
-The motivation behind gating skip connections is to compare the U-Net architecture (\cite{UNet}) to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
+The motivation behind gating skip connections is to bring the U-Net architecture (\cite{UNet}) closer to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
 
-We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. The training curves are shown in figure \ref{fig:SkipConnections}.
+To measure the effect of skip connections, we propose the following experiment. We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. Training curves are shown in figure \ref{fig:SkipConnections}.
 
 \begin{figure}[ht]
     \centering
@@ -338,9 +343,9 @@ We have to point out, that all of our semi-supervised experiments never exceeded
 \subsection{Unsupervised Loss Weight}
 \label{sec:UnsupervisedLossWeight}
 
-This parameter determines the relative magnitude of the segmentation and the reconstruction loss. We first though this parameter would have significant impact in the training and would need to be tuned carefully. It turned out not to be the case. We ended up setting it 1 and not optimizing it.
+This parameter determines the relative magnitude of the segmentation and the reconstruction loss. We first thought this parameter would have significant impact on the training and would need to be tuned carefully. It turned out not to be the case. We ended up setting it 1 and not optimizing it.
 
-Varying this parameter from 10 to 0.1 has minimal impact on model performance. When we examined the segmentation masks and reconstruction images as they evolve throughout the training process, we discovered that the primary impact is the change of speed of learning each task. When the parameter is 10, the reconstruction task is learned quickly and segmentation task is learned slowly. When we set it 0.1 the situation is reversed. If we let the training covnerge, it ends up learning both tasks equally well.
+Varying this parameter from 10 to 0.1 has minimal impact on model performance. When we examined infered segmentation masks and reconstructed images, as they evolve throughout the training process, we discovered that this parameter primarily impacts the speed at which the two tasks are learned relative to each other. When the parameter is 10, the reconstruction task is learned quickly and segmentation task is learned slowly. When we set it 0.1 the situation is reversed. If we let the training converge, it ends up learning both tasks equally well.
 
 Interesting behaviour happens only at the extreme. When the parameter is set to zero, the reconstruction task produces no gradients and the training collapses to the fully-supervised regime. We performed an experiment that verified this behaviour.
 
@@ -351,7 +356,7 @@ Interesting behaviour happens only at the extreme. When the parameter is set to 
 \begin{figure}[p]
     \centering
     \includegraphics[width=140mm]{../../figures/06-noise/noise-size.pdf}
-    \caption{Comparing reconstructions performed by models trained with small and large noise tiles. (A) Low-level reconstructions, make no sense in the musical context. (B) Visible edges of the dropped tiles in the reconstruction. (C) High-level reconstruction with staffliens and stems visible. (D) Forgotten notehead.}
+    \caption{Comparing reconstructions performed by models trained with small and large noise tiles. (A) Low-level reconstructions, make no sense in the musical context. (B) Edges of dropped tiles leaking into the reconstruction. (C) High-level reconstruction with staffliens and stems visible. (D) Forgotten notehead.}
     \label{fig:NoiseSize}
 \end{figure}
 
@@ -362,9 +367,17 @@ There are two major nosie parameters that can be varied:
     \item Noise dropout ratio (ratio of erased input pixels)
 \end{itemize}
 
-In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution. We belive large tiles force the model to learn larger sybmols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
+In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution (but not too large). We belive large tiles force the model to learn larger symbols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
 
-The first two images show, how the model can learn to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped, as seen in the second pair of images. We can see edges of the noise tiles still visible in the reconstruction, reconstructed stafflines fade when close to other symbols and most reconstructions are based on relatively low-level features. The beam corner is extended upwards, which is reasonable in the sense of drawing straight lines, but not in any musical sense. Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
+The first two images show, how the model learns to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped (as seen in the second pair of images). We can see that:
+
+\begin{itemize}
+    \item Edges of noise tiles are still visible in the reconstruction.
+    \item Reconstructed stafflines fade when they are close to other symbols.
+    \item Most reconstructions are based on relatively low-level features. The beam corner is extended upwards, which is reasonable in the sense of drawing straight lines, but not in any musical sense.
+\end{itemize}
+
+Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
 
 We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of figure \ref{fig:NoiseSize}.
 
@@ -372,16 +385,16 @@ We ended up training all experiments with noise tiles of size equal to two staff
 \subsection{Activation Function}
 \label{sec:ActivationFunction}
 
-We first used ReLU activation function (rectified linear unit) [CITE] in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article [CITE]. However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) [CITE] solved these issues. We took inspiration from Hajič jr. et al. [CITE], who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
+We first used ReLU activation function (rectified linear unit) in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article (\cite{UNet}). However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) solved these issues. We took inspiration from \cite{DorferEtAl}, who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/03-activation-function/functions.pdf}
-    \caption{Visualization of the explored activation functions. ReLU is flat in negative values and therefore has no gradient there. ELU has exponentially decaying gradient and leaky ReLU has a constant gradient. The parameter for the displayed leaky ReLU is 0.1 to make its shape more apparent.}
+    \caption{Visualization of explored activation functions. ReLU is flat in negative values and therefore has no gradient there. ELU has exponentially decaying gradient and leaky ReLU has a constant gradient. The parameter for the displayed leaky ReLU is 0.1 to make its shape more apparent.}
     \label{fig:ActivationFunctions}
 \end{figure}
 
-The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem [CITE]. When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because the target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
+The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem (\cite{DyingRelu}). When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because our target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
 
 \begin{figure}[ht]
     \centering
@@ -390,9 +403,9 @@ The convergence problems were happening at the very beginning of training. The m
     \label{fig:ActivationTrainingProgression}
 \end{figure}
 
-Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that the unlabeled data acts as regularization, damping any extreme gradients, and stabilizing the training.
+Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that unlabeled data act as regularization, damping any extreme gradients, and stabilizing the training.
 
-We also tried using the leaky ReLU function [CITE] with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
+We also tried using the leaky ReLU function with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
 
 \begin{figure}[ht]
     \centering
@@ -401,7 +414,7 @@ We also tried using the leaky ReLU function [CITE] with parameter $\alpha = 0.01
     \label{fig:ActivationFunctionPerformances}
 \end{figure}
 
-We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of Dorfer. et al. [CITE] (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).
+We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of \cite{DorferEtAl} (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).
 
 
 \section{Semi-supervised Improvements}

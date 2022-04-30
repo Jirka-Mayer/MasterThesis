@@ -422,7 +422,7 @@ We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with al
 
 The main hypothesis this work is attempting to validate is that adding unlabeled data to the training process helps. We primarily want to improve model accuracy, but as we will see, this is not what our experiments suggest. They do, however, show improvements in other areas, such as training stability and reduced overfitting (section \ref{sec:UtilizingCvcMuscima}).
 
-In the first experiment, we test how various labeled to unlabeled data ratios affect the training process. The experiment uses the MUSCIMA++ dataset [CITE]:
+In this first experiment, we test how various labeled to unlabeled data ratios affect the training process. The experiment uses the MUSCIMA++ dataset (\cite{MuscimaPP}):
 
 \begin{itemize}
     \item 10 pages act as the labeled set.
@@ -433,8 +433,6 @@ In the first experiment, we test how various labeled to unlabeled data ratios af
 
 The learned task is notehead segmentation (both full and empty noteheads). Noteheads are an ideal symbol for this kind of measurement. Firstly, they are very abundant. Each page of the dataset contains many instances of them and they are evenly scattered over the whole page. If we were to instead detect more rare symbols (such as clefs or rests), it could skew the results, making it difficult to separate the effects we want to measure. Handwritten noteheads are also very diverse in style, making them more interesting to learn (compared to, say, stafflines).
 
-All model hyperparameters are set to sensible deafults. The derivation of these values is desribed later in section \ref{sec:UnderstandingHyperparameters}. The model capacity, described by the \emph{inner features} parameter is set to 8, which is useful to know for comparison with the next experiment. The proposed dataset is rather small and so the training is very noisy (figure \ref{fig:ExplorationNoteheadsNoDropout}). To stabilize the trainig we set the dropout parameter to 50\% [CITE DROPOUT].
-
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads.pdf}
@@ -442,45 +440,54 @@ All model hyperparameters are set to sensible deafults. The derivation of these 
     \label{fig:ExplorationNoteheadsNoDropout}
 \end{figure}
 
-We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
-
-Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
-
-The reason for the drop in performance is actually caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
+All model hyperparameters are set to sensible deafults. The derivation of these values has been described in section \ref{sec:UnderstandingHyperparameters}. The model capacity, described by the \emph{inner features} parameter is set to 8, which is useful to know for comparison with the next experiment. The proposed dataset is rather small and so the training is very noisy (figure \ref{fig:ExplorationNoteheadsNoDropout}). To stabilize the trainig we set the dropout parameter to 50\% (\cite{Dropout}).
 
 \begin{figure}[p]
     \centering
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-dropout.pdf}
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-dropout-smooth.pdf}
-    \caption{Lorem ipsum dolor.}
+    \caption{Training curves of semi-supervised models with different ratios of supervised and unsupervised data. The bottom image is smoothed using exponential moving average. The fully-supervised baseline (blue) clearly outperforms all semi-supervised models.}
     \label{fig:ExplorationNoteheads}
 \end{figure}
+
+We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
+
+Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
+
+The reason for this drop in performance is probably caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads-evaluation.pdf}
-    \caption{Lorem ipsum dolor.}
+    \caption{Notehead segmentation performance on the MUSCIMA++ writer-independent test set, when trainig with 10 labeled pages and a variable number of unlabeled pages. Adding more unlabeled data helps, but never outperforms the fully-supervised baseline.}
     \label{fig:ExplorationNoteheadsEvaluation}
 \end{figure}
 
-\begin{table}[b!]
+\begin{table}[ht]
     \centering
-    \begin{tabular}{l@{\hspace{1.5cm}}D{.}{,}{3.2}D{.}{,}{1.2}D{.}{,}{2.3}}
+    \begin{tabular}{l@{\hspace{2.0cm}}rrrr}
         \toprule
-        & \mc{} & \mc{\textbf{Směrod.}} & \mc{} \\
-        \pulrad{\textbf{Efekt}} & \mc{\pulrad{\textbf{Odhad}}} & \mc{\textbf{chyba}$^a$} &
-        \mc{\pulrad{\textbf{P-hodnota}}} \\
+        \textbf{Page type} & \multicolumn{4}{c}{\textbf{Page count}} \\
         \midrule
-        Abs. člen     & -10.01 & 1.01 & \mc{---} \\
-        Pohlaví (muž) & 9.89   & 5.98 & 0.098 \\
-        Výška (cm)    & 0.78   & 0.12 & <0.001 \\
+        Labeled   & 10 & 10 & 10 & 10 \\
+        Unlabeled & 0  & 5  & 10 & 50 \\
+        \midrule
+        \textbf{Seed} & \multicolumn{4}{c}{\textbf{F1 Score (\%)}} \\
+        \midrule
+        0 & 92.73 & 90.87 & 91.08 & 92.38 \\
+        1 & 93.02 & 90.36 & 90.13 & 91.24 \\
+        2 & 93.54 & 90.05 & 89.88 & 91.56 \\
+        3 & 93.34 & 90.99 & 89.65 & 92.63 \\
+        4 & 93.90 & 90.58 & 90.99 & 90.95 \\
+        5 & 93.00 & 90.54 & 91.43 & 92.37 \\
+        \midrule
+        mean & 93.25 & 90.56 & 90.53 & 91.86 \\
+        std. dev. & 0.39 & 0.31 & 0.67 & 0.64 \\
         \bottomrule
     \end{tabular}
-    \caption{Lorem ipsum dolor.}
+    \caption{Values plotted in chart \ref{fig:ExplorationNoteheadsEvaluation}.}
     \label{tab:ExplorationNoteheads}
 \end{table}
-
-TODO: show visualization images / qualitative comparison between runs?
 
 
 \section{Utilizing CVC-MUSCIMA}
@@ -493,30 +500,30 @@ This experiment attempts to address issues of the previous experiment:
     \item small dataset
 \end{itemize}
 
-In section \ref{sec:Datasets} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA [CITE] and MUSCIMA++ [CITE]. The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
+In section \ref{sec:Datasets} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA (\cite{CvcMuscima}) and MUSCIMA++ (\cite{MuscimaPP}). The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
 
-Hajič jr. and Dorfer [CITE 1, 2] have used the U-Net architecture [CITE] for segmentation and they trained it on the MUSCIMA++ dataset. Their results are very impressive. Being able to further build on their work and improving the model by utilizing unlabeled data from CVC-MUSCIMA would be very helpful for the field of OMR. This experiment attempts to do just that.
+\cite{DorferEtAl} and \cite{HajicEtAl} have used the U-Net architecture (\cite{UNet}) for segmentation and they trained it on the MUSCIMA++ dataset. Their results are very impressive. Being able to further build on their work and improving the model by utilizing unlabeled data from CVC-MUSCIMA would be very helpful for the field of OMR. This experiment attempts to do just that.
 
-We take the whole CVC-MUSCIMA dataset, separate writers from the MUSCIMA++ independent test set, separate 20 pages for validation set and remove other pages from these validation writers. The pages that remain are produced by writers not present in both the test set and the validation set. These remaining pages are partially contained in the MUSCIMA++ dataset (99 pages) and all the other pages are used as unlabeled data (551 pages). Therefore we train on 650 out of 1000 pages of the CVC-MUSCIMA dataset.
-
-Since the dataset is now much larger than in the previous experiment (section \ref{sec:SemisupervisedImprovements}), we no longer need the dropout. In fact, the training is even more stable and individual runs are clearly separated.
-
-This experiment attempts to compare fully-supervised and semi-supervised models, regardless of their capacity. We therefore train various model capacities (the \emph{inner features} model parameter) and then compare the best ones for each setting.
-
-Another difference to the previous experiment is that the ratio of labeled to unlabeled data is fixed and given by dataset sizes. The ratio of 99 to 551 pages corresponds best with the ratio 10:50.
+We take the whole CVC-MUSCIMA dataset, separate writers from the MUSCIMA++ independent test set, separate 20 pages for validation set and remove other pages from these validation writers. Pages that remain are produced by writers not present in both the test set and the validation set. These remaining pages are partially contained in the MUSCIMA++ dataset (99 pages) and all the other pages are used as unlabeled data (551 pages). Therefore we train on 650 out of 1000 pages of the CVC-MUSCIMA dataset.
 
 \begin{figure}[p]
     \centering
     \includegraphics[width=140mm]{../../figures/02-cvc-improvements/supervised.pdf}
     \includegraphics[width=140mm]{../../figures/02-cvc-improvements/semisupervised.pdf}
-    \caption{Lorem ipsum dolor. TODO: the two improvements charts}
+    \caption{Comparison of fully-supervised and semi-supervised training regimes with models of varying capacity (inner feateures) on the CVC-MUSCIMA dataset. Both regimes get to the same performance, below the 96\% line. The model 1 in semi-supervised regime peaks below 80\% line and is not visible in the chart.}
     \label{fig:CvcImprovements}
 \end{figure}
+
+Since the dataset is now much larger than in the previous experiment (section \ref{sec:SemisupervisedImprovements}), we no longer need dropout layers. In fact, the training is even more stable without it and individual runs are clearly separated.
+
+This experiment attempts to compare fully-supervised and semi-supervised models regardless of their capacity. We therefore train various model capacities (the \emph{inner features} model parameter) and then compare the best ones for each setting.
+
+Another difference to the previous experiment is that the ratio of labeled to unlabeled data is fixed and given by dataset sizes. The ratio of 99 to 551 pages corresponds best with the ratio 10:50.
 
 The validation dataset F1 score over the course of training can be seen in figure \ref{fig:CvcImprovements}. In these charts we can see:
 
 \begin{itemize}
-    \item Models with 1 and 2 \emph{inner features} are clearly underfitting in the supervised mode (compared to other models). When we add the unlabeled data, their perfomance drops significantly, but the training curve gets much smoother.
+    \item Models with 1 and 2 \emph{inner features} are clearly underfitting in the supervised mode (compared to other models). When we add unlabeled data, their perfomance drops significantly, but the training curve gets much smoother.
     \item Models with 4 and 8 \emph{inner features} worsen much less and also get smoother (especially 4 becomes much more stable).
     \item Model 16 no longer worsens, it is able to learn both tasks.
 \end{itemize}
@@ -524,8 +531,8 @@ The validation dataset F1 score over the course of training can be seen in figur
 Conclusions can be drawn from these observations:
 
 \begin{itemize}
-    \item The reconstruction and segmentation tasks clearly compete for model capacity. The performance drop of adding unlabeled data decreases, as the model capacity increases.
-    \item The addition of unlabeled data can be used as a regularization technique. This is evident from the fact that training curves get much smoother as we add unlabeled data. A~regularization effect is also described in the corresponding literature [CITE SSL overview].
+    \item The reconstruction and segmentation tasks clearly compete for model capacity. The performance drop due to adding unlabeled data decreases, as the model capacity increases.
+    \item The addition of unlabeled data can be used as a regularization technique. This is evident from the fact that training curves get much smoother as we add unlabeled data (especially for models 2 and 4). A~regularization effect is also described in the corresponding literature (\cite{SemisupervisedOverview}).
     \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. But from section \ref{sec:NoiseParameters} we know that some abstract representations are learned. Maybe these learned representations are not used during segmentation.
 \end{itemize}
 
@@ -539,7 +546,7 @@ We first tried performing notehead segmentation, like in the previous experiment
 
 Informed by this failure, we choose to segment stafflines. Firstly, because they are very easy geometric shapes to understand. Stafflines are the first objects that a model learns to repair during reconstruction and does so with great precision. Secondly, thier visual appearance in the printed and handwritten datasets is very similar, but not identical. A challenge is still being presented (handwritten stafflines are much thinner and the surrounding symbols are more varied).
 
-We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed noteheads attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in figure \ref{fig:StafflineTransfer}.
+We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in figure \ref{fig:StafflineTransfer}.
 
 \begin{figure}[ht]
     \centering
@@ -548,7 +555,7 @@ We set model capacity to 8 \emph{inner features} and train for 20 epochs. The tr
     \label{fig:StafflineTransfer}
 \end{figure}
 
-During the first 7 epochs, both variants perform equally well, however at about the tenth epoch all fully-supervised models start overfitting and their F1 score drops to very low numbers. Interestingly, all the semi-supervised models stay at a comparably high score. They seem to plateau, instead of overfitting. This is a clear example of how the unsupervised data can regularize the training and prevent the model from overfitting. Unfortunately, if take the best checkpoints of both variants, we see that both variants perform equally well. The semi-supervised model does not pass the supervised baseline.
+During the first 7 epochs, both variants perform equally well, however at about the tenth epoch all fully-supervised models start overfitting and their F1 score drops to very low numbers. Interestingly, all the semi-supervised models stay at a comparably high score. They seem to plateau, instead of overfitting. This is a clear example of how the unsupervised data can regularize the training and prevent the model from overfitting. Unfortunately, if we take the best checkpoints of both variants, we see that both variants perform equally well. The semi-supervised model does not surpass the supervised baseline.
 
 \begin{figure}[ht]
     \centering
@@ -557,7 +564,7 @@ During the first 7 epochs, both variants perform equally well, however at about 
     \label{fig:StafflineRemoval}
 \end{figure}
 
-Evaluating the top semi-supervised model on the MUSCIMA++ test set (writer-independent) gives us a pixelwise F1 score of 97.70\%. The same model peaks on the validation set at 97.81\%. 
+Evaluating the best semi-supervised model on the MUSCIMA++ test set (writer-independent) gives us a pixelwise F1 score of 97.70\%. The same model peaks on the validation set at 97.81\%. 
 
-We can compare ourselves to an article by \cite{StafflineDetection} focusing on staff-removal task. The article presents a convolutional network, trained in a supervised way on a dataset extracted from the CVC-MUSCIMA dataset (\cite{CvcMuscima}). The table 4 in the article provides their pixelwise F1 score on undistorted images (99.25\%), together with other older approaches (97.59\% up to 98.51\%). We can see that our results are in a range comparable to older approaches, which is impressive, since we did not use a single annotated handwritten image. Our annotated training images were purely digitally constructed, without any attempts at mimicking the handwritten style.
+We can compare ourselves to an article by \cite{StafflineDetection}, focusing on staffline removal. The article presents a convolutional network trained in a supervised way on a dataset extracted from the CVC-MUSCIMA dataset (\cite{CvcMuscima}). The table 4 in the article provides their pixelwise F1 score on undistorted images (99.25\%) together with other older approaches (97.59\% up to 98.51\%). We can see that our results are in a range comparable to older approaches, which is impressive, since we did not use a single annotated handwritten image. Our annotated training images were purely digitally constructed, without any attempts at mimicking the handwritten style.
 

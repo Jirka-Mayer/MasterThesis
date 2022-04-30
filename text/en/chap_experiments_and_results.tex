@@ -94,18 +94,15 @@ The output of the upsampling block and the skip connection is merged in an eleme
 In all layers (except for the two output sigmoid layers) the exponential linear unit (ELU) activation function is used. Reasons for this are described in section \ref{sec:ActivationFunction}.
 
 
-% =============== REFACTORED UP TO HERE ===============
-
-
 \section{Datasets}
 \label{sec:Datasets}
 
 When performing experiments, we will use these three datasets:
 
 \begin{itemize}
-    \item CVC-MUSCIMA [CITE]
-    \item MUSCIMA++ [CITE]
-    \item DeepScores v2 [CITE]
+    \item CVC-MUSCIMA (\cite{CvcMuscima})
+    \item MUSCIMA++ (\cite{MuscimaPP})
+    \item DeepScores v2 (\cite{DeepScores})
 \end{itemize}
 
 These are the only datasets in the OMR field that contain semantic segmentation labels (for Common Western Music Notation). A comprehensive list of available OMR datasets is maintained by Alexander Pacha on his GitHub page\footnote{\url{https://apacha.github.io/OMR-Datasets/}}.
@@ -113,12 +110,12 @@ These are the only datasets in the OMR field that contain semantic segmentation 
 
 \subsection{CVC-MUSCIMA}
 
-This dataset was introduced in the article \emph{CVC-MUSCIMA: A ground truth of handwritten music score images for writer identification and staff removal} [CITE]. It contains 1000 pages of handwritten music, created by having 50 writers transcribe 20 unique music pages. It was designed for the tasks of staff removal and writer identification. It is also the only handwritten music dataset, consisting of entire music pages -- all other handwritten datasets contain only individual symbols. This makes it very important for research focusing on symbol detection.
+This dataset was introduced in the article \emph{CVC-MUSCIMA: A ground truth of handwritten music score images for writer identification and staff removal} (\cite{CvcMuscima}). It contains 1000 pages of handwritten music, created by having 50 writers transcribe 20 unique music pages. It was designed for the tasks of staff removal and writer identification. It is also the only handwritten music dataset, consisting of entire music pages -- all other handwritten datasets contain only individual symbols. This makes it very important for research focusing on symbol detection.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../img/cvc-muscima.png}
-    \caption{One page from the CVC-MUSCIMA dataset. Image taken from the website \url{http://www.cvc.uab.es/cvcmuscima/index_database.html}}
+    \caption{One page from the CVC-MUSCIMA dataset. The image is taken from the website \url{http://www.cvc.uab.es/cvcmuscima/index_database.html}}
     \label{fig:CvcMuscima}
 \end{figure}
 
@@ -127,28 +124,28 @@ Since the dataset does not contain segmentation labels, we will use it primarily
 
 \subsection{MUSCIMA++}
 
-MUSCIMA++ was created by Jan Hajič jr. and Pavel Pecina as a general-purpouse OMR dataset. It was introduced in the article \emph{In Search of a Dataset for Handwritten Optical Music Recognition: Introducing MUSCIMA++} [CITE]. The dataset builds on top of the CVC-MUSCIMA dataset, providing rich annotations for 140 selected pages. The annotation scheme was designed to be sufficiently low-level for tasks such as object detection (bounding boxes, symbol classes, segmentation masks), while also having relationship data in the form of an oriented graph, that lets a user extract semantic information about the music. Dataset authors call this annotation scheme the \emph{Music Notation Graph} (MuNG).
+MUSCIMA++ was created by Jan Hajič jr. and Pavel Pecina as a general-purpouse OMR dataset. It was introduced in the article \emph{In Search of a Dataset for Handwritten Optical Music Recognition: Introducing MUSCIMA++} (\cite{MuscimaPP}). The dataset builds on top of the CVC-MUSCIMA dataset, providing rich annotations for 140 selected pages. The annotation scheme was designed to be sufficiently low-level for tasks such as object detection (bounding boxes, symbol classes, segmentation masks), while also having relationship data in the form of an oriented graph, that lets a user extract semantic information about the music. Dataset authors call this annotation scheme the \emph{Music Notation Graph} (MuNG).
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=100mm]{../img/muscima-pp.png}
-    \caption{Annotations present in the MUSCIMA++ dataset (bounding boxes, segmentation masks and the notation graph). The image is taken from [CITE]}
+    \caption{Annotations present in the MUSCIMA++ dataset (bounding boxes, segmentation masks and the notation graph). The image is taken from \cite{MuscimaPP}}
     \label{fig:MuscimaPP}
 \end{figure}
 
-The dataset was updated in 2019, fixing bugs and modifying class names to be aligned with the SMuFL\footnote{\url{https://www.smufl.org/}} standard. A similar update was also performed on the DeepScores dataset [CITE], making it easier to use both datasets simultaneously. The latest dataset description and accompanying tools can be found on the GitHub page\footnote{\url{https://github.com/OMR-Research/muscima-pp}} of the OMR Research group\footnote{\url{https://omr-research.net/}}.
+The dataset was updated in 2019, fixing bugs and modifying class names to be aligned with the SMuFL\footnote{\url{https://www.smufl.org/}} standard. A similar update was also performed on the DeepScores dataset (\cite{DeepScores}), making it easier to use both datasets simultaneously. The latest dataset description and accompanying tools can be found on the GitHub page\footnote{\url{https://github.com/OMR-Research/muscima-pp}} of the OMR Research group\footnote{\url{https://omr-research.net/}}.
 
 We will use this dataset as a source of labeled data for semantic segmentation.
 
 
 \subsection{DeepScores}
 
-The version 2 of this dataset was introduced in the article \emph{The DeepScoresV2 Dataset and Benchmark for Music Object Detection} [CITE]. The dataset contains entire pages of printed music, with annotations best suited for object detection, semantic segmentation and object classification. It was created from MusicXML documents taken from the MuseScore\footnote{\url{https://musescore.com/sheetmusic}} website and engraved using the LilyPond\footnote{\url{https://lilypond.org/}} tool. The dataset contains 255,386 pages of music, but also provides a dense and diverse subset, having only 1,714 pages. The version 2 also introduced a MUSCIMA++ compatibility mode, making it easier for the two datasets to be used simultaneously.
+The version 2 of this dataset was introduced in the article \emph{The DeepScoresV2 Dataset and Benchmark for Music Object Detection} (\cite{DeepScores}). The dataset contains entire pages of printed music, with annotations best suited for object detection, semantic segmentation and object classification. It was created from MusicXML documents taken from the MuseScore\footnote{\url{https://musescore.com/sheetmusic}} website and engraved using the LilyPond\footnote{\url{https://lilypond.org/}} tool. The dataset contains 255,386 pages of music, but also provides a dense and diverse subset, having only 1,714 pages. The version 2 also introduced a MUSCIMA++ compatibility mode, making it easier for the two datasets to be used simultaneously.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../img/deepscores.png}
-    \caption{An example of the semantic segmentation labels from the DeepScores v2 dataset. The dataset is very large, but digitally engraved.}
+    \caption{An example of semantic segmentation labels from the DeepScores v2 dataset. The dataset is very large, but digitally engraved.}
     \label{fig:DeepScoresV2}
 \end{figure}
 
@@ -173,13 +170,23 @@ The splitting is needed for an experiment, that gradually increases the amount o
 
 This stability is achieved by giving consideration to the splitting logic (sampling the unlabeled data as the very last slice) and to the shuffling logic (the data is shuffled prior to splitting). All the randomness in the process is controled by a parameter called \emph{dataset seed}, which is distinct from the plain \emph{seed} used for other initialization (model weights and noise generation). Introduction of the \emph{dataset seed} is essential for isolating our experiments from variability introduced by differential dataset sampling.
 
-One additional consideration has to be made when sampling datasets CVC-MUSCIMA and MUSCIMA++. Since their content consists of music transcribed by 50 different wirters, we would like our splits to keep these writers separate. Anotherwords we do not want a single writer to be present in both the training set and the validation set. We enforce this constraint to better measure the ability of the trained model to generalize. The official test set of MUSCIMA++ built with this approach is called the \emph{writer-independent test set}, therefore we will call this property of our splitting logic \emph{writer-independence}.
+One additional consideration has to be made when sampling datasets CVC-MUSCIMA and MUSCIMA++. Because their content consists of music transcribed by 50 different wirters, we would like our splits to keep these writers separate. Anotherwords, we do not want a single writer to be present in both the training set and the validation set. We enforce this constraint to better measure the ability of the trained model to generalize. The official test set of MUSCIMA++ built with this approach is called the \emph{writer-independent test set}, therefore we will call this property of our splitting logic \emph{writer-independence}.
 
-% TODO: figure - splitting logic in an example "all" -> "shuffle" -> "splits"
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/dataset-splitting.pdf}
+    \caption{Visualization of how a dataset is split in the writer-independent fashion, if we request 2 validation, 2 supervised and 3 unsupervised pages.}
+    \label{fig:DatasetSplitting}
+\end{figure}
 
-When combining datsets, we run into the problem of image resolution. Since our proposed architecture learns visual features in scale-dependant way, we need to bring all datasets to the same resolution. Datasets CVC-MUSCIMA and MUSCIMA++ have the same source images, so the problem is not present here, however the dataset DeepScores is sampled at a lower resolution. In paper printing, a unit of DPI (dots per inch) is used. We cannot, however, use this unit, since it would assume the music from both datasets has the same size when printed on paper. A more general approach would be to define a unit, that could be derived from the raster image itself, without any knowledge of the scanning/printing DPI. The open format MusicXML\footnote{\url{https://www.musicxml.com/}} uses a spatial unit defined as \emph{one tenth of interline space} (the distance between two adjacent stafflines). We took inspiration form this and defined a unit we call DPSS (dots per staff space). DPSS of a raster music document is the number of pixels between two neighbouring stafflines. We measured the DPSS of CVC-MUSCIMA to be \verb`28.75 px` and of DeepScores to be \verb`16.0 px`.
+When combining datsets, we run into the problem of image resolution. Since our proposed architecture learns visual features in scale-dependant way, we need to bring all datasets to the same resolution. Datasets CVC-MUSCIMA and MUSCIMA++ have the same source images, so the problem is not present here, however the dataset DeepScores is sampled at a lower resolution. In paper printing, a unit of DPI (dots per inch) is used. We cannot, however, use this unit, since it would assume the music from both datasets has the same size when printed on a paper. A more general approach would be to define a unit, that could be derived from the raster image itself, without any knowledge of the scanning/printing DPI. The open format MusicXML\footnote{\url{https://www.musicxml.com/}} uses a spatial unit defined as \emph{one tenth of interline space} (the distance between two adjacent stafflines). We took inspiration form this and defined a unit we call DPSS (dots per staff space). DPSS of a raster music document is the number of pixels between two neighbouring stafflines. We measured the DPSS of CVC-MUSCIMA to be \verb`28.75 px` and of DeepScores to be \verb`16.0 px`.
 
-% TODO: figure - visualization of DPSS in MUSCIMA++ sample
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=140mm]{../img/dpss-definition.pdf}
+    \caption{The spatial unit \emph{interline space}, size of which in pixels we call DPSS (dots per staff space).}
+    \label{fig:DpssDefinition}
+\end{figure}
 
 When matching the resolution of both datasets, we need to perform image resizing and we need to choose the target size and the interpolation method. We ended up upscaling the DeepScores dataset to match the resolution of the CVC-MUSCIMA dataset with the bilinear interpolation method.
 

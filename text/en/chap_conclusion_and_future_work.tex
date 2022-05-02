@@ -1,19 +1,16 @@
 \chapter{Conclusion and Future Work}
 \label{chap:ConclusionAndFutureWork}
 
-% - very minor improvements and mostly not in the perfomance, not worth the effor
-% - check notes in the thesis-text-structure.md
-% - main acomplishment -- ways of training U-Net in an unsupervised manner
+We have designed a scheme for training the U-Net architecture in an unsupervised manner and used it in a semi-supervised setting to try and improve optical music recognition. The unsupervised training scheme is successful at teaching the model useful representations. These are used during reconstruction to repair masked images of music sheets.
 
+Using the model for semi-supervised learning improves training stability and the added unlabeled data regularizes the model, preventing it from overfitting. The performance of the semi-supervised model was able to reach the supervised baseline, but was unfortunately unable to surpass it.
 
+We were also able to replicate and validate findings of other people, such as using ELU activation function to prevent the dying ReLU problem.
 
-% - the improvement is minor and difficult to achieve
-% - unsup data does provide regularization
-%     - less noisy learning curve
-%     - SS coverges, when fully supervised does not
-%     - prevents overfitting (expand on what that means)
-% From introduction:
-% - we found that improvements can be achieved, however they are relatively minor and occur in only very specific circumstances
-%     - this is probably because the model learns only low-level features (as seen in denoising visualizations); should it learn higher-level featuers, it could work better (GAN, etc..)
-%         - show visualizations, desribe in detail
-%         - describe GAN as a learned-loss function
+By looking carefully at learned reconstructions, we can see that the model produces a lot of blurred areas in places where many viable reconstructions can be generated. We belive that if a reconstruction is certain (e.g. extending stafflines), then it is not blurred. However, if a reconstruction may contain multiple viable possibilities (e.g. noteheads may have many shapes, a note can have many piches within the space of the masked area), then the model does not pick one reconstruction, but instead generates a blurred average of all of them.
+
+We belive that replacing the simple reconstruction loss function with a discriminative network could force the model to pick a specific, realistic-looking reconstruction, instead of producing a blurred average of many reconstructions. This would reframe the reconstruction task as a generative adversarial network (GAN) problem, rather than an autoencoder problem (as it is framed now). This might be a more apropriate approach, since there is no encoded latent representation from which the image is reconstructed. It is being reconstructed out of nothing, with the only condition of matching the surrounding image.
+
+This intuition is further supported by an article by \cite{Cuneiforms}, where the authors propose a modified GAN architecture for generating synthetic cuneiform tablets. Their model has two discriminators to force the generated tile to match the surrounding image and an auxiliary classifier that enforces generation of the correct cuneiform symbol. We would like to explore this modified scheme in a future work.
+
+The goal of the thesis was to explore semi-supervised learning in the context of optical music recongition and to compare SSL results to a supervised baseline. We have fulfilled the goal by adapting a state-of-the-art object recognition architecture to the semi-supervised setting and evaluating it in three distinct experiments. We also explored and described all of its hyperparameters. We have not been able to surpass the supervised baseline, but we have identified possible problems and described the trajectory of our future work.

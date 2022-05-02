@@ -3,6 +3,44 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+################################
+# Reconstruction visualization #
+################################
+
+img = cv2.imread("large-noise-solid.png", 0) / 255
+picked_rows = [0, 2, 5, 8]
+
+fig, axes = plt.subplots(len(picked_rows), 3)
+SCALE = 1.2
+fig.set_figheight(5.0 * SCALE)
+fig.set_figwidth(7.0 * SCALE)
+fig.set_tight_layout(True)
+
+def dstack(img):
+    return np.dstack([1 - img] * 3)
+
+for i, row in enumerate(picked_rows):
+    h = 256 + 1
+    for j, s, t in [
+        (0, slice(0, 514-2), "Masked input"),
+        (1, slice(514, 514*2-2), "Reconstruction"),
+        (2, slice(514*2, 514*3-2), "Ground truth")
+    ]:
+        ax = axes[i][j]
+        if i == 0:
+            ax.set_title(t)
+        ax.imshow(dstack(img[h*row:h*(row+1),s]))
+        ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+
+plt.savefig("reconstructions.pdf")
+plt.close()
+
+
+#########################
+# Noise size comparison #
+#########################
+
 #from ...code.app.datasets.NoiseGenerator import NoiseGenerator
 import importlib.util
 spec = importlib.util.spec_from_file_location(

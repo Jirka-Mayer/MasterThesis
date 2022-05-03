@@ -61,7 +61,7 @@ standard_noise, _ = NoiseGenerator(42, 28.75*2, 0.25, True)._create_random_noise
 big_noise, _ = NoiseGenerator(43, 28.75*6, 0.25, True)._create_random_noise_mask(*img.shape)
 
 noises = [small_noise, standard_noise, big_noise]
-noise_names = ["Small", "Ideal", "Large"]
+noise_names = ["Small", "Medium", "Large"]
 
 fig, axes = plt.subplots(2, 3)
 SCALE = 1.0

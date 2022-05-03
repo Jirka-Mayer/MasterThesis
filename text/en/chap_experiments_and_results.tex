@@ -1,6 +1,8 @@
 \chapter{Experiments and Results}
 \label{chap:ExperimentsAndResults}
 
+% TODO: repair figure placements
+
 This chapter begins with a detailed description of the training process. Follows an in-depth exploration, discussion and experimentation regarding major hyperparameters, where each section concludes with the choice of a default value for that parameter. Finally, each of the last three sections presents an experiment we performed:
 
 \begin{itemize}
@@ -45,7 +47,7 @@ The number of labeled and unlabeled pairs in a composite batch differs and their
 
 Composite batches are created by taking training pairs from the labeled and unlabeled splits of the dataset. When the next pair is taken, we either take it from the labeled or the unlabeled split, whichever is larger, with respect to their target ratio. For example, if their ratio in the whole dataset is 1:5 (labeled to unlabeled) and we have 10:201 remaining pairs, we will take an unlabeled pair next. We take pairs until we have \emph{batch size} number of them and then we send them to the training logic as a new composite batch.
 
-To be able to batch together the training images, they need to have the same spatial dimensions. For this reason we do not train on the entire music pages, but instead on tiles of fixed size. The size is set to 512 pixels wide and 256 pixels high for all experiments. We took inspiration for this from the article by \cite{HajicEtAl}. Tiles are sampled from a music page at random locations and the number of tiles is equal to the area of the page, divided by the area of the tile. The article also employs a technique called oversampling, where a tile is sampled up to five times if it contains no pixel of the target segmentation class. This technique helps with training on rare symbols (e.g. clefs), where most tiles would contain no instance of the target class. Our training logic also implements this oversampling technique.
+To be able to batch together the training images, they need to have the same spatial dimensions. For this reason we do not train on the entire music pages, but instead on tiles of fixed size. The size is set to 512 pixels wide and 256 pixels high for all experiments. We took inspiration for this from the article by \cite{HajicEtAl}. Tiles are sampled from a music page at random locations and the number of tiles is equal to the area of the page, divided by the area of the tile. The article also employs a technique called oversampling, where a tile is sampled up to five times if it contains no pixel of the target segmentation class. This technique helps with training on rare symbols (e.g.\@ clefs), where most tiles would contain no instance of the target class. Our training logic also implements this oversampling technique.
 
 The semantic segmentation task is usually framed as a pixelwise classification problem. For this reason we use the pixelwise binary crossentropy loss function (\cite{DeepLearningBook}). To make the loss value invariant to changes in \emph{batch size} and \emph{tile size}, we compute the average over all pixels in a batch. This allows us to sum the supervised and unsupervised losses, as they are of a similar magnitude, regardles of the number of labeled and unlabeled training pairs used. The reconstruction task will also use the same pixelwise binary crossentropy loss function, since the reconstruction of a single pixel can be understood as the probability of that pixel being black.
 
@@ -70,7 +72,7 @@ Using such a small batch size is, however, not possible in our case. Our trainin
     \label{fig:SmallBatches}
 \end{figure}
 
-An example of such a failing training can be seen in figure \ref{fig:SmallBatches}. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
+An example of such a failing training can be seen in the figure \ref{fig:SmallBatches}. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
 
 Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
 
@@ -78,9 +80,9 @@ Since all of our experiments have training data ratios between 1:0 and 1:10, we 
 \subsection{Dropout}
 \label{sec:Dropout}
 
-The network architecture, as described in section \ref{sec:Architecture}, contains a dropout layer within every convolutional block (\cite{Dropout}). We use the dropout when training on small datasets (experiment \ref{sec:SemisupervisedImprovements}), because the training is otherwise very noisy and it is difficult to infer any measurable differences between runs. We use dropout as a mean to stabilize the training, which in this setting also slightly increases model accuracy.
+The network architecture, as described in Section \ref{sec:Architecture}, contains a dropout layer within every convolutional block (\cite{Dropout}). We use the dropout when training on small datasets (experiment \ref{sec:SemisupervisedImprovements}), because the training is otherwise very noisy and it is difficult to infer any measurable differences between runs. We use dropout as a mean to stabilize the training, which in this setting also slightly increases model accuracy.
 
-When training on larger datasets, the training is no longer unstable and dropout is not needed (experiments \ref{sec:UtilizingCvcMuscima} and \ref{sec:KnowledgeTransfer}). In fact, it causes the training process to converge much slower (2x or more) and it does not increase model accuracy anymore.
+When training on larger datasets, the training is no longer unstable and dropout is not needed (Section \ref{sec:UtilizingCvcMuscima} and \ref{sec:KnowledgeTransfer}). In fact, it causes the training process to converge much slower (2x or more) and it does not increase model accuracy anymore.
 
 Both the original U-Net article (\cite{UNet}) and the article by \cite{HajicEtAl} use the U-Net architecture without any dropout. In fact, an article by \cite{DropoutOnConvolutions} argues, that using traditional dropout on convolutional layers may not be ideal. This agrees with our findings, that dropout helps only in very specific circumstances.
 
@@ -92,7 +94,7 @@ From all this we conclude that dropout should be disabled by default.
 \subsection{Skip Connections}
 \label{sec:SkipConnections}
 
-In the chapter about our architecture (\ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We present three modes for skip connections:
+In the chapter about our architecture (Section \ref{sec:Architecture}) we described a method for disabling skip connections during reconstruction training. We present three modes for skip connections:
 
 \begin{itemize}
     \item solid -- skip connections are always enabled, like in a typical U-Net archtiecture
@@ -102,7 +104,7 @@ In the chapter about our architecture (\ref{sec:Architecture}) we described a me
 
 The motivation behind gating skip connections is to bring the U-Net architecture (\cite{UNet}) closer to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
 
-To measure the effect of skip connections, we propose the following experiment. We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. Training curves are shown in figure \ref{fig:SkipConnections}.
+To measure the effect of skip connections, we propose the following experiment. We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. Training curves are shown in the figure \ref{fig:SkipConnections}.
 
 \begin{figure}[ht]
     \centering
@@ -138,7 +140,7 @@ Interesting behaviour happens only at the extreme. When the parameter is set to 
     \label{fig:NoiseSize}
 \end{figure}
 
-There are two major nosie parameters that can be varied:
+There are two major noise parameters that can be varied:
 
 \begin{itemize}
     \item Noise resolution (size of dropout squares)
@@ -157,13 +159,13 @@ The first two images show, how the model learns to remove small noise easily. Th
 
 Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
 
-We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of figure \ref{fig:NoiseSize}.
+We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of the figure \ref{fig:NoiseSize}.
 
 
 \subsection{Activation Function}
 \label{sec:ActivationFunction}
 
-We first used ReLU activation function (rectified linear unit) in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article (\cite{UNet}). However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) solved these issues. We took inspiration from \cite{DorferEtAl}, who also use the ELU activation function. The difference between the two can be seen in figure \ref{fig:ActivationFunctions}.
+We first used ReLU activation function (rectified linear unit) in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article (\cite{UNet}). However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) solved these issues. We took inspiration from \cite{DorferEtAl}, who also use the ELU activation function. The difference between the two can be seen in the figure \ref{fig:ActivationFunctions}.
 
 \begin{figure}[ht]
     \centering
@@ -172,7 +174,7 @@ We first used ReLU activation function (rectified linear unit) in all convolutio
     \label{fig:ActivationFunctions}
 \end{figure}
 
-The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem (\cite{DyingRelu}). When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because our target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
+The convergence problems were happening at the very beginning of training. The model quickly learned to output a completely black image and never recovered from that state. We think it was an instance of the "dying ReLU" problem (\cite{DyingRelu}). When the model is first initialized, it outputs a gray-ish image, since model weights are drawn from a uniform distribution centered on zero and the final sigmoid layer turns that into a 0.5 gray. Because our target images have black background, the model first learns to produce mostly black images. Only then does it learn to output white pixels as well (see Figure \ref{fig:ActivationTrainingProgression}). With ReLU, the first training phase probably overshoots into the negative range of most synapses and that causes the model to get stuck in that negative range with zero gradient.
 
 \begin{figure}[ht]
     \centering
@@ -188,17 +190,17 @@ We also tried using the leaky ReLU function with parameter $\alpha = 0.01$, howe
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/03-activation-function/performance.pdf}
-    \caption{An experiment from section \ref{sec:UtilizingCvcMuscima} with 8 inner features, trained in fully-supervised mode with various activation functions. All runs show the same performance.}
+    \caption{An experiment from Section \ref{sec:UtilizingCvcMuscima} with 8 inner features, trained in fully-supervised mode with various activation functions. All runs show the same performance.}
     \label{fig:ActivationFunctionPerformances}
 \end{figure}
 
-We run one of the experiments from section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of \cite{DorferEtAl} (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).
+We run one of the experiments from Section \ref{sec:UtilizingCvcMuscima} with all proposed activation functions to see what impact it has on model performance (Figure \ref{fig:ActivationFunctionPerformances}). We can clearly see that they all perform equally well, so we choose ELU as the only activation function that does not suffer from the convergence problem. We thereby validate the work of \cite{DorferEtAl} (their article does not provide explanation for the use of ELU, but we belive they must have encountered these exact same problems).
 
 
 \section{Semi-supervised Improvements}
 \label{sec:SemisupervisedImprovements}
 
-The main hypothesis this work is attempting to validate is that adding unlabeled data to the training process helps. We primarily want to improve model accuracy, but as we will see, this is not what our experiments suggest. They do, however, show improvements in other areas, such as training stability and reduced overfitting (section \ref{sec:UtilizingCvcMuscima}).
+The main hypothesis this work is attempting to validate is that adding unlabeled data to the training process helps. We primarily want to improve model accuracy, but as we will see, this is not what our experiments suggest. They do, however, show improvements in other areas, such as training stability and reduced overfitting (Section \ref{sec:UtilizingCvcMuscima}).
 
 In this first experiment, we test how various labeled to unlabeled data ratios affect the training process. The experiment uses the MUSCIMA++ dataset (\cite{MuscimaPP}):
 
@@ -218,7 +220,7 @@ The learned task is notehead segmentation (both full and empty noteheads). Noteh
     \label{fig:ExplorationNoteheadsNoDropout}
 \end{figure}
 
-All model hyperparameters are set to sensible deafults. The derivation of these values has been described in section \ref{sec:UnderstandingHyperparameters}. The model capacity, described by the \emph{inner features} parameter is set to 8, which is useful to know for comparison with the next experiment. The proposed dataset is rather small and so the training is very noisy (figure \ref{fig:ExplorationNoteheadsNoDropout}). To stabilize the trainig we set the dropout parameter to 50\% (\cite{Dropout}).
+All model hyperparameters are set to sensible deafults. The derivation of these values has been described in Section \ref{sec:UnderstandingHyperparameters}. The model capacity, described by the \emph{inner features} parameter is set to 8, which is useful to know for comparison with the next experiment. The proposed dataset is rather small and so the training is very noisy (Figure \ref{fig:ExplorationNoteheadsNoDropout}). To stabilize the trainig we set the dropout parameter to 50\% (\cite{Dropout}).
 
 \begin{figure}[p]
     \centering
@@ -230,7 +232,7 @@ All model hyperparameters are set to sensible deafults. The derivation of these 
 
 We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
 
-Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
+Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see Section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
 
 The reason for this drop in performance is probably caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
 
@@ -263,7 +265,7 @@ The reason for this drop in performance is probably caused by the fact, that the
         std. dev. & 0.39 & 0.31 & 0.67 & 0.64 \\
         \bottomrule
     \end{tabular}
-    \caption{Values plotted in chart \ref{fig:ExplorationNoteheadsEvaluation}.}
+    \caption{Values plotted in the figure \ref{fig:ExplorationNoteheadsEvaluation}.}
     \label{tab:ExplorationNoteheads}
 \end{table}
 
@@ -278,7 +280,7 @@ This experiment attempts to address issues of the previous experiment:
     \item small dataset
 \end{itemize}
 
-In section \ref{sec:Datasets} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA (\cite{CvcMuscima}) and MUSCIMA++ (\cite{MuscimaPP}). The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
+In Section \ref{sec:Datasets} we described the two major datasets for handwritten music recognition: CVC-MUSCIMA (\cite{CvcMuscima}) and MUSCIMA++ (\cite{MuscimaPP}). The dataset MUSCIMA++ is a highly annotated subset of CVC-MUSCIMA. We can view both datasets together as a single semi-supervised dataset, being 12\% labeled and 88\% unlabeled. To the best of our knowledge, nobody has yet tried to utilize both datasets simulatenously for semantic segmentation.
 
 \cite{DorferEtAl} and \cite{HajicEtAl} have used the U-Net architecture (\cite{UNet}) for segmentation and they trained it on the MUSCIMA++ dataset. Their results are very impressive. Being able to further build on their work and improving the model by utilizing unlabeled data from CVC-MUSCIMA would be very helpful for the field of OMR. This experiment attempts to do just that.
 
@@ -292,13 +294,13 @@ We take the whole CVC-MUSCIMA dataset, separate writers from the MUSCIMA++ indep
     \label{fig:CvcImprovements}
 \end{figure}
 
-Since the dataset is now much larger than in the previous experiment (section \ref{sec:SemisupervisedImprovements}), we no longer need dropout layers. In fact, the training is even more stable without it and individual runs are clearly separated.
+Since the dataset is now much larger than in the previous experiment (Section \ref{sec:SemisupervisedImprovements}), we no longer need dropout layers. In fact, the training is even more stable without it and individual runs are clearly separated.
 
 This experiment attempts to compare fully-supervised and semi-supervised models regardless of their capacity. We therefore train various model capacities (the \emph{inner features} model parameter) and then compare the best ones for each setting.
 
 Another difference to the previous experiment is that the ratio of labeled to unlabeled data is fixed and given by dataset sizes. The ratio of 99 to 551 pages corresponds best with the ratio 10:50.
 
-The validation dataset F1 score over the course of training can be seen in figure \ref{fig:CvcImprovements}. In these charts we can see:
+The validation dataset F1 score over the course of training can be seen in the figure \ref{fig:CvcImprovements}. In these charts we can see:
 
 \begin{itemize}
     \item Models with 1 and 2 \emph{inner features} are clearly underfitting in the supervised mode (compared to other models). When we add unlabeled data, their perfomance drops significantly, but the training curve gets much smoother.
@@ -311,7 +313,7 @@ Conclusions can be drawn from these observations:
 \begin{itemize}
     \item The reconstruction and segmentation tasks clearly compete for model capacity. The performance drop due to adding unlabeled data decreases, as the model capacity increases.
     \item The addition of unlabeled data can be used as a regularization technique. This is evident from the fact that training curves get much smoother as we add unlabeled data (especially for models 2 and 4). A~regularization effect is also described in the corresponding literature (\cite{SemisupervisedOverview}).
-    \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. But from section \ref{sec:NoiseParameters} we know that some abstract representations are learned. Maybe these learned representations are not used during segmentation.
+    \item All models come close to the 96\% line, but never cross it. While the semi-supervised models get as good as the fully-supervised, they never get better. It seems the reconstruction task is not learning any useful representations. But from Section \ref{sec:NoiseParameters} we know that some abstract representations are learned. Maybe these learned representations are not used during segmentation.
 \end{itemize}
 
 
@@ -324,7 +326,7 @@ We first tried performing notehead segmentation, like in the previous experiment
 
 Informed by this failure, we choose to segment stafflines. Firstly, because they are very easy geometric shapes to understand. Stafflines are the first objects that a model learns to repair during reconstruction and does so with great precision. Secondly, thier visual appearance in the printed and handwritten datasets is very similar, but not identical. A challenge is still being presented (handwritten stafflines are much thinner and the surrounding symbols are more varied).
 
-We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in figure \ref{fig:StafflineTransfer}.
+We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in the figure \ref{fig:StafflineTransfer}.
 
 \begin{figure}[ht]
     \centering

@@ -1,14 +1,12 @@
 \chapter{Experiments and Results}
 \label{chap:ExperimentsAndResults}
 
-TODO: Rewrite this introduction paragraph
-
-This chapter starts by describing the motivation behind the chosen architecture and all details regarding its setup. We follow by listing all used datasets, their role in our experiments and challenges arising from their combination. Next section is dedicated to the generation of noise used during unsupervised training. Then we describe all the details of the training process and the metrics used for evaluation. A detailed analysis is provided for each individual hyperparameter and its role in the training process. Finally, each of the last three sections presents an experiment we performed:
+This chapter begins with a detailed description of the training process. Follows an in-depth exploration, discussion and experimentation regarding major hyperparameters, where each section concludes with the choice of a default value for that parameter. Finally, each of the last three sections presents an experiment we performed:
 
 \begin{itemize}
-    \item \ref{sec:SemisupervisedImprovements}: Measure the impact of adding different amounts of unsupervised data during training.
-    \item \ref{sec:UtilizingCvcMuscima}: Measure the impact of model size (number of synapses) on the task performance, when training on all available handwritten data.
-    \item \ref{sec:KnowledgeTransfer}: Attempt to learn the segmentation task on printed music and evaluate it on handwritten music, while using unlabeled handwritten music as regularization.
+    \item Measure the impact of adding different amounts of unsupervised data during training (Section \ref{sec:SemisupervisedImprovements}).
+    \item Measure the impact of model size (number of synapses) on the task performance, when training on all available handwritten data (Section \ref{sec:UtilizingCvcMuscima}).
+    \item Attempt to learn the segmentation task on printed music and evaluate it on handwritten music, while using unlabeled handwritten music as regularization (Section \ref{sec:KnowledgeTransfer}).
 \end{itemize}
 
 

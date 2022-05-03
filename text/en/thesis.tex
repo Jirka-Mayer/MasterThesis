@@ -56,7 +56,7 @@
 %%% Basic information on the thesis
 
 % Thesis title in English (exactly as in the formal assignment)
-\def\ThesisTitle{Semi-supervised learning in Optical Music Recognition}
+\def\ThesisTitle{Semi-supervised Learning in Optical Music Recognition}
 
 % Author of the thesis
 \def\ThesisAuthor{Jiří Mayer}
@@ -79,8 +79,8 @@
 \def\SupervisorsDepartment{Institute of Formal and Applied Linguistics}
 
 % Study programme and specialization
-\def\StudyProgramme{Computer Science - Software and Data Engineering (N0613A140015)}
-\def\StudyBranch{Computer Science - Software and Data Engineering}
+\def\StudyProgramme{Computer Science - Software and Data Engineering}
+\def\StudyBranch{ISDP}
 
 % An optional dedication: you can thank whomever you wish (your supervisor,
 % consultant, a person who lent the software, etc.)
@@ -90,7 +90,7 @@ Dedication.
 
 % Abstract (recommended length around 80-200 words; this is not a copy of your thesis assignment!)
 \def\Abstract{%
-Optical music recognition (OMR) is a niche subfield of computer vision, where some labeled datasets exist, but there is an order of magnitude more unlabeled data available. Recent advances in the field happened largely thanks to the adoption of deep learning. However, these neural networks are being trained using labeled data only. Semi-supervised learning is a set of techniques that aim to incorporate unlabeled data during training to produce more capable models. We have modified a state-of-the-art object detection architecture and designed a semi-supervised training scheme to utilize unlabeled data. These modifications have successfully allowed us to train the architecture in an unsupervised setting, and our semi-supervised experiments indicate improvements to training stability and reduced overfitting.
+Optical music recognition (OMR) is a niche subfield of computer vision, where some labeled datasets exist, but there is an order of magnitude more unlabeled data available. Recent advances in the field happened largely thanks to the adoption of deep learning. However, such neural networks are being trained using labeled data only. Semi-supervised learning is a set of techniques that aim to incorporate unlabeled data during training to produce more capable models. We have modified a state-of-the-art object detection architecture and designed a semi-supervised training scheme to utilize unlabeled data. These modifications have successfully allowed us to train the architecture in an unsupervised setting, and our semi-supervised experiments indicate improvements to training stability and reduced overfitting.
 }
 
 % 3 to 5 keywords (recommended), each enclosed in curly braces
@@ -118,8 +118,9 @@ Optical music recognition (OMR) is a niche subfield of computer vision, where so
 %%% Each chapter is kept in a separate file
 \include{chap_introduction}
 \include{chap_related_work}
-\include{chap_current_state_of_omr}
+\include{chap_optical_music_recognition}
 \include{chap_semisupervised_learning}
+\include{chap_methodology}
 \include{chap_experiments_and_results}
 \include{chap_conclusion_and_future_work}
 

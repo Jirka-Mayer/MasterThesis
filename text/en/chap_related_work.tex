@@ -3,7 +3,7 @@
 
 \section{The U-Net architecture}
 
-The article \emph{U-Net: Convolutional Networks for Biomedical Image Segmentation} (\cite{UNet}) introduces a fully-convolutional neural network, that is surprisingly good at performing image segmentation. The article uses the architecture for semantic segmentation and instance segmentation of various biomedical images.
+The article \emph{U-Net: Convolutional Networks for Biomedical Image Segmentation} (\cite{UNet}) introduces a fully-convolutional neural network, that is surprisingly good at performing image segmentation. The article uses this architecture for semantic segmentation and instance segmentation of various biomedical images.
 
 \begin{figure}[ht]
     \centering
@@ -12,15 +12,23 @@ The article \emph{U-Net: Convolutional Networks for Biomedical Image Segmentatio
     \label{fig:UNetArchitecture}
 \end{figure}
 
-The authors describe the left part of the network as the contracting path. It follows the typical layout of a convolutional network. The right part is called the expansive path. It is built as an inverse to the contractive part. The combination of a contraction with an expansion causes the network to first gather context information around each point of the image and then spread it back out to inform the segmentation process. The two halves are connected using skip-connections so that the expansive path also has accurate local information. Since the architecture resembles an autoencoder, we refer to the two halves of the network as an encoder and a decoder.
+The authors describe the left part of the network as the contracting path. It follows the typical structure of a convolutional network. The right part is called the expansive path. It is built as an inverse to the contractive part. The combination of contraction and expansion causes the network to first gather context information around each point of the image and then spread it back out to inform the segmentation process. The two halves are connected using skip-connections, so that the expansive path also has accurate local information available. Since the architecture resembles an autoencoder, we refer to the two halves of the network as an encoder and a decoder. One additional advantage of this architecture is its speed of both inference and training.
 
 
 \section{Music object detection}
 
-TODO: U-Net in music recognition (\cite{DorferEtAl}, \cite{HajicEtAl}) and its superiority in comparison to other CNN models (\cite{PachaBaseline}).
+A variation of the U-Net architecture has been first utilized in the context of music recognition in the article \emph{On the Potential of Fully Convolutional Neural Networks for Musical Symbol Detection} (\cite{DorferEtAl}). Authors used it for notehead detection, as a continuation of their previous research into convolutional neural networks for music symbol detection. They managed to outperform other approaches with a much simpler system and faster inference time.
 
-% = unet i OMR
-% dorfer, hajič, pacha comparison
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=145mm]{../img/muscima-detection-comparison.png}
+    \caption{Comparison of the R-CNN and the U-Net architecture for object detection on the MUSCIMA++ dataset. The RetinaNet signle-shot detection is very poor, so the image is omitted to save space. The original image with additional images showing other datasets can be found in (\cite{PachaBaseline}).}
+    \label{fig:MuscimaDetectionComparison}
+\end{figure}
+
+Both authors then refined the approach in the article \emph{Towards Full-Pipeline Handwritten OMR with Musical Symbol Detection by U-Nets} (\cite{HajicEtAl}). The architecture was extended to perform multi-class segmentation in one pass and domain-specific tricks have been added to increase performance on some symbols. A notation assembly system was designed using decision trees and a complete pipeline with MIDI output was constructed and evaluated.
+
+In the same year, a comparison of object detection architectures for musical symbols was published: \emph{A Baseline for General Music Object Detection with Deep Learning} (\cite{PachaBaseline}). The authors trained three object detection architectures, namely Faster R-CNN, RetinaNet, and U-Net. Their evaluation was performed using three datasets with object detection ground truth, and varied appearance and content. These were the Capitan dataset (mensural notation), the DeepScores dataset (digitally printed modern notation), and the MUSCIMA++ dataset (handwritten modern notation). The article establishes baseline results in different areas of music recognition, but most importantly, identifies the U-Net architecture as the best known architecture for object detection.
 
 
 \section{Generative semi-supervised learning}

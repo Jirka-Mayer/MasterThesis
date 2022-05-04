@@ -1,9 +1,6 @@
 \chapter{Semi-supervised Learning}
 \label{chap:SemisupervisedLearning}
 
-% TODO: add some images to this section, too much text
-% TODO: add more citations
-
 This chapter provides an overview of semi-supervised learning (SSL). The following text draws information predominantly from the article \emph{An Overview of Deep Semi-Supervised Learning} (\cite{SemisupervisedOverview}) and from the book \emph{Semi-supervised learning} (\cite{SslBook}).
 
 In deep learning, the goal typically is to learn some function $f: X \rightarrow Y$ by training a neural network on pairs of data points $(x, y)$. Deep neural networks have large number of trainable parameters, which require adequately large training datasets. Not having enough training data causes the model to overfit and then be unable to generalize to unseen data. Producing training datasets usually requires a lot of manual labour. Obtaining input data from the domain $X$ is typically easy, the difficult task is assigning correct outputs from $Y$ (called labeling). For this reason, many niche domain problems (e.g.\@ handwritten music recognition or cuneiform recognition) lack sufficiently large labeled datasets for training deep learning models (\cite{MuscimaPP}, \cite{Cuneiforms}). These domains, however, have a relative abundance of unlabeled data.
@@ -105,13 +102,11 @@ A variational autoencoder (VAE) (\cite{VariationalAutoencoder}) is a model that 
 
 \cite{KingmaSslVae} used variational autoencoders in a semi-supervised setting. They propose three ways of extending VAEs:
 
-% TODO: passive voice - remove
 \paragraph*{M1 Model}
-We start by pre-training an unsupervised VAE model using all available labeled and unlabeled samples. The goal is to learn a low-dimensional latent space and then transform all data points to this space (create embeddings). After this, we train a supervised classifier on these embeddings using only the labeled portion of the data. This setup leverages the manifold assumption and the assumption that learning classification in a low-dimensional space is easier than in a high-dimensional space. Also, since the variational autoencoder forces the creation of gaussian-shaped clusters in the latent space, the classifier has an easier job separating these clusters.
+First, an unsupervised VAE model is pre-trained using all available labeled and unlabeled samples. The goal is to learn a low-dimensional latent space and then transform all data points to this space (create embeddings). After this, a supervised classifier is trained on these embeddings using only the labeled portion of the data. This setup leverages the manifold assumption and the assumption that learning classification in a low-dimensional space is easier than in a high-dimensional space. Also, since the variational autoencoder forces the creation of gaussian-shaped clusters in the latent space, the classifier has an easier job separating these clusters.
 
-% TODO: passive voice - remove
 \paragraph*{M2 Model}
-In the previous setup, we ignored labels $y$ when training the autoencoder. Here, we extend the latent vector $z$ by an additional vector $y$. This vector will be set to the label, if the label is known and will be left unconstrained for unlabeled data. We can view this as splitting the original latent vector $z$ into two parts, one being left free to be trained as usual, and the second (categorical) part being sometimes trained to match the label $y$ of the learned datapoint $x$. If the label is not known, this part is trained in the unsupervised mode only, like the original latent variable $z$. When the training finishes, the encoder can be immediately used as a classifier, by interpreting the latent vector $y$ as the output label. The two parts of the latent representation ($z$ and $y$) can be interpreted as style and content embddings respectively.
+In the previous setup, labels $y$ were ignored when training the autoencoder. Here, the latent vector $z$ is extended by an additional vector $y$. This vector will be set to the label, if the label is known and will be left unconstrained for unlabeled data. We can view this as splitting the original latent vector $z$ into two parts, one being left free to be trained as usual, and the second (categorical) part being sometimes trained to match the label $y$ of the learned datapoint $x$. If the label is not known, this part is trained in the unsupervised mode only, like the original latent variable $z$. When the training finishes, the encoder can be immediately used as a classifier, by interpreting the latent vector $y$ as the output label. The two parts of the latent representation ($z$ and $y$) can be interpreted as style and content embddings respectively.
 
 \paragraph*{M1 + M2 Model}
 The last setup involves training the model M1 in the unsupervised way and then training the model M2 in semi-sueprvised way on embeddings produced by M1. It can be viewed as the M2 model, utilizing dimensionality reduction by M1. This stacked setup yields the best results.

@@ -33,7 +33,27 @@ In the same year, a comparison of object detection architectures for musical sym
 
 \section{Generative semi-supervised learning}
 
-TODO: All the unsupervised, semi-supervised, clustering and disentagnling features of adversarial autoencoders (\cite{AdversarialAutoencoders}). Pioneered by smisup VAE (\cite{KingmaSslVae}).
+The article \emph{Adversarial Autoencoders} (\cite{AdversarialAutoencoders}) proposes an autoencoder archtiecture, where the latent space distribution is shaped by an adversarial mechanism. A separate discriminator network is trained to distinguish between real embeddings from the dataset and fake embeddings drawn from the desired distribution. This process forces the encoder to produce embeddings that match the desired distribution (e.g.\@ gaussian). The resulting latent space is tightly filled with dataset embeddings and there are no holes present. This makes the decoder a very good generative model, as any random sample from the desired distribution will be correctly decoded into a realistic data point.
 
-% adversarial autoencoders
-% which has been pioneered by M1+M2 VAE
+The article compares the latent space of an adversarial autoencoder (AAE) to a variational autoencoder (VAE) (\cite{VariationalAutoencoder}), and it is clearly visible how an AAE better matches a desired distribution. Most of these visualisations are performed on the MNIST dataset (\cite{Mnist}).
+
+The article then describes modifications of the architecture, related to splitting the latent vector to a continuous and a categorical part and treating the categorical part as a class information. These modified archtiectures are then used to perfom many interesting tasks, such as semi-supervised classification, unsupervised clustering and styl-content disentangling.
+
+The article is referenced here as a demonstration of the capabilities of generative semi-supervised models.
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}{72.5mm}
+        \raggedright
+        \includegraphics[width=70mm]{../img/aae-clustering-semi.png}
+        \caption{semi-supervised, 1000 labels}
+    \end{subfigure}%
+    \begin{subfigure}{72.5mm}
+        \raggedleft
+        \includegraphics[width=70mm]{../img/aae-clustering-unsup.png}
+        \caption{unsupervised}
+    \end{subfigure}
+    \caption{Semi-supervised and unsupervised dimensionality reduction results for an adversarial autoencoder on the MNIST dataset. Images taken from \cite{AdversarialAutoencoders}.}
+    \label{fig:test}
+\end{figure}
+

@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 img = cv2.imread("sup-0010.png", 0) / 255
 img = img[0:64,:]
@@ -31,3 +32,5 @@ ax3.imshow(np.dstack([1 - img_ex]*3))
 
 plt.savefig("small-batches.pdf")
 plt.close()
+
+os.system("pdfcrop small-batches.pdf small-batches.pdf")

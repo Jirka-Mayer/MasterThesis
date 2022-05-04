@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import cv2
+import os
 
 #########################################
 # Training process output segmentations #
@@ -31,6 +32,8 @@ ax3.set_title("Second epoch")
 
 plt.savefig("progression.pdf")
 plt.close()
+
+os.system("pdfcrop progression.pdf progression.pdf")
 
 
 ####################################

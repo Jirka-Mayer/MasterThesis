@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
 ################################
@@ -35,6 +36,8 @@ for i, row in enumerate(picked_rows):
 
 plt.savefig("reconstructions.pdf")
 plt.close()
+
+os.system("pdfcrop reconstructions.pdf reconstructions.pdf")
 
 
 #########################
@@ -87,3 +90,5 @@ for i, ax in enumerate(axes[1]):
 
 plt.savefig("noise-comparison.pdf")
 plt.close()
+
+os.system("pdfcrop noise-comparison.pdf noise-comparison.pdf")

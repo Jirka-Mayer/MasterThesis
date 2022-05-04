@@ -67,7 +67,7 @@ Using such a small batch size is, however, not possible in our case. Our trainin
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=140mm]{../../figures/07-small-batches/small-batches.pdf}
+    \includegraphics[width=145mm]{../../figures/07-small-batches/small-batches.pdf}
     \caption{When batches are too small, some of them will lack labeled data and the model will fail to learn the supervised segmentation task. Instead, reconstruction output leaks into the segmentation output. This example has batch size 2 and 1:10 ratio.}
     \label{fig:SmallBatches}
 \end{figure}
@@ -178,7 +178,7 @@ The convergence problems were happening at the very beginning of training. The m
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=140mm]{../../figures/03-activation-function/progression.pdf}
+    \includegraphics[width=145mm]{../../figures/03-activation-function/progression.pdf}
     \caption{The training process starts by learning to output a mostly black image, which probably causes the model to overshoot during the fully-supervised training and get stuck in the "dying ReLU" problem.}
     \label{fig:ActivationTrainingProgression}
 \end{figure}
@@ -211,14 +211,14 @@ In this first experiment, we test how various labeled to unlabeled data ratios a
     \item All of these pages come from the writer-independent train set of MUSCIMA++ and are chosen in a writer-independent manner (all the splits contain pages by different writers).
 \end{itemize}
 
-The learned task is notehead segmentation (both full and empty noteheads). Noteheads are an ideal symbol for this kind of measurement. Firstly, they are very abundant. Each page of the dataset contains many instances of them and they are evenly scattered over the whole page. If we were to instead detect more rare symbols (such as clefs or rests), it could skew the results, making it difficult to separate the effects we want to measure. Handwritten noteheads are also very diverse in style, making them more interesting to learn (compared to, say, stafflines).
-
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/01-exploration-noteheads/noteheads.pdf}
     \caption{Training on a small dataset without dropout is noisy, see the orange line at the beginning and the green line at the end.}
     \label{fig:ExplorationNoteheadsNoDropout}
 \end{figure}
+
+The learned task is notehead segmentation (both full and empty noteheads). Noteheads are an ideal symbol for this kind of measurement. Firstly, they are very abundant. Each page of the dataset contains many instances of them and they are evenly scattered over the whole page. If we were to instead detect more rare symbols (such as clefs or rests), it could skew the results, making it difficult to separate the effects we want to measure. Handwritten noteheads are also very diverse in style, making them more interesting to learn (compared to, say, stafflines).
 
 All model hyperparameters are set to sensible deafults. The derivation of these values has been described in Section \ref{sec:UnderstandingHyperparameters}. The model capacity, described by the \emph{inner features} parameter is set to 8, which is useful to know for comparison with the next experiment. The proposed dataset is rather small and so the training is very noisy (Figure \ref{fig:ExplorationNoteheadsNoDropout}). To stabilize the trainig we set the dropout parameter to 50\% (\cite{Dropout}).
 
@@ -273,6 +273,14 @@ The reason for this drop in performance is probably caused by the fact, that the
 \section{Utilizing CVC-MUSCIMA}
 \label{sec:UtilizingCvcMuscima}
 
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/supervised.pdf}
+    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/semisupervised.pdf}
+    \caption{Comparison of fully-supervised and semi-supervised training regimes with models of varying capacity (inner feateures) on the CVC-MUSCIMA dataset. Both regimes get to the same performance, below the 96\% line. The model 1 in semi-supervised regime peaks below 80\% line and is not visible in the chart.}
+    \label{fig:CvcImprovements}
+\end{figure}
+
 This experiment attempts to address issues of the previous experiment:
 
 \begin{itemize}
@@ -285,14 +293,6 @@ In Section \ref{sec:Datasets} we described the two major datasets for handwritte
 \cite{DorferEtAl} and \cite{HajicEtAl} have used the U-Net architecture (\cite{UNet}) for segmentation and they trained it on the MUSCIMA++ dataset. Their results are very impressive. Being able to further build on their work and improving the model by utilizing unlabeled data from CVC-MUSCIMA would be very helpful for the field of OMR. This experiment attempts to do just that.
 
 We take the whole CVC-MUSCIMA dataset, separate writers from the MUSCIMA++ independent test set, separate 20 pages for validation set and remove other pages from these validation writers. Pages that remain are produced by writers not present in both the test set and the validation set. These remaining pages are partially contained in the MUSCIMA++ dataset (99 pages) and all the other pages are used as unlabeled data (551 pages). Therefore we train on 650 out of 1000 pages of the CVC-MUSCIMA dataset.
-
-\begin{figure}[p]
-    \centering
-    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/supervised.pdf}
-    \includegraphics[width=140mm]{../../figures/02-cvc-improvements/semisupervised.pdf}
-    \caption{Comparison of fully-supervised and semi-supervised training regimes with models of varying capacity (inner feateures) on the CVC-MUSCIMA dataset. Both regimes get to the same performance, below the 96\% line. The model 1 in semi-supervised regime peaks below 80\% line and is not visible in the chart.}
-    \label{fig:CvcImprovements}
-\end{figure}
 
 Since the dataset is now much larger than in the previous experiment (Section \ref{sec:SemisupervisedImprovements}), we no longer need dropout layers. In fact, the training is even more stable without it and individual runs are clearly separated.
 
@@ -326,14 +326,14 @@ We first tried performing notehead segmentation, like in the previous experiment
 
 Informed by this failure, we choose to segment stafflines. Firstly, because they are very easy geometric shapes to understand. Stafflines are the first objects that a model learns to repair during reconstruction and does so with great precision. Secondly, thier visual appearance in the printed and handwritten datasets is very similar, but not identical. A challenge is still being presented (handwritten stafflines are much thinner and the surrounding symbols are more varied).
 
-We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in the figure \ref{fig:StafflineTransfer}.
-
 \begin{figure}[ht]
     \centering
     \includegraphics[width=140mm]{../../figures/04-staffline-transfer/transfer.pdf}
     \caption{Handwritten staffline segmentation F1 score, when training on labeled printed music and unlabeled handwritten music.}
     \label{fig:StafflineTransfer}
 \end{figure}
+
+We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in the figure \ref{fig:StafflineTransfer}.
 
 During the first 7 epochs, both variants perform equally well, however at about the tenth epoch all fully-supervised models start overfitting and their F1 score drops to very low numbers. Interestingly, all the semi-supervised models stay at a comparably high score. They seem to plateau, instead of overfitting. This is a clear example of how the unsupervised data can regularize the training and prevent the model from overfitting. Unfortunately, if we take the best checkpoints of both variants, we see that both variants perform equally well. The semi-supervised model does not surpass the supervised baseline.
 

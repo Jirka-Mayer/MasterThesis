@@ -5,8 +5,8 @@ from .Ex_Unet import Ex_Unet
 
 
 EXPERIMENT_LIST = [
-    Ex01_SemisupUnet(),
-    Ex_HyperparamSearch(),
+    #Ex01_SemisupUnet(), # legacy
+    #Ex_HyperparamSearch(), # legacy
     Ex_Unet(),
     Ex_Datasets()
 ]

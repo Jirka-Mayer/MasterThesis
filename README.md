@@ -5,14 +5,6 @@
 - prepare this repository for submission
 - fill out xmpdata files
 - prepare abstract in the thesis and in the abstract.pdf file
-- order hard cover
-- study programme and branch?
-- write dedication
-
-
-## Playground
-
-See the `playground` folder.
 
 
 ## Notes

@@ -57,7 +57,14 @@ The following section lists major SSL methods. These methods are often directly 
 
 The core idea of this method is that a small neighborhood of each datapoint should have the same label as that datapoint. This idea follows directly from the cluster assumption. In this method, we train the model to minimze distance between a known datapoint $x$ and a perturbed datapoint $\hat{x}$. This training is performed in addition to the usual supervised training. This method does not rely on the corresponding label $y$, instead it trains to minimize the distance between $f(x)$ and $f(\hat{x})$. This lets us utilize all unlabeled data points as well.
 
-The method can be seen as an extension of supervised learning. In supervised learning, we train on individual points and learn the overall shape from them. Here, we train on small neighbourhoods, which makes sure the decision boundary will not come close to any individual datapoint. Further utilization of unlabeled data points in the proximity of labeled data points should force the decision boundary even further away, into low-density regions.
+The method can be seen as an extension of supervised learning. In supervised learning, we train on individual points and learn the overall shape from them. Here, we train on small neighbourhoods, which makes sure the decision boundary will not come close to any individual datapoint. Further utilization of unlabeled data points in the proximity of labeled data points should force the decision boundary even further away, into low-density regions (\cite{SslTechnicalReport}).
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=145mm]{../img/ssl-toy.png}
+    \caption{SSL toy example -- the \emph{two moons} dataset with three labeled examples for each class. $\Pi$-model and VAT are both consistency regularization techniques. The image is taken from \cite{SemisupervisedOverview}.}
+    \label{fig:SslToy}
+\end{figure}
 
 
 \subsection{Proxy-label Methods}
@@ -68,10 +75,12 @@ One of these methods is \emph{self-training}. In self-training, labeled data is 
 
 \emph{Pseudo-labeling} is a similar method, where the unlabeled data points are also assigned pseudo-labels. In this case, these pseudo-labels are treated as trainable parameters, similar to model parameters, and are optimized together with the model during training. The difficult part is designing a good loss function for pseudo-labels, because applying this method naively causes the pseudo-labels to overfit, due to so-called confirmation bias.
 
+Self-training has been used for semantic segmentation in the work of \cite{SelfTrainingSegmentation}.
+
 
 \subsection{Graph-based Methods}
 
-These methods frame the problem in the language of graphs. Data points are represented as vertices of a graph and weighted edges are present between pairs of vertices, where the weight corresponds to some similarity between the two points. The labeling task can be viewed as a propagation of information along edges of the graph.
+These methods frame the problem in the language of graphs (\cite{SslTechnicalReport}). Data points are represented as vertices of a graph and weighted edges are present between pairs of vertices, where the weight corresponds to some similarity between the two points. The labeling task can be viewed as a propagation of information along edges of the graph.
 
 This propagation resembles proxy-label methods, however due to the graph framing, we can consider things like vertex neighbourhood and its impact on the examined node, or we can leverage algebraic structures like adjacency matrix.
 
@@ -81,7 +90,7 @@ A different set of graph methods aims to learn data point embeddings, which pres
 \subsection{Entropy Minimization}
 \label{sec:EntropyMinimization}
 
-Consistency regularization methods attempt to push the decision boundary away from clusters and into the low-density regions by stabilizing the model output in a neighborhood around each data point. Entropy minimization is a different technique that attempts to do the same thing. In entropy minimization, we penalize the model for being unsure about its predictions. Low-confidence predictions are predictions with more than one class having non-zero probability. Such probability distributions have higher entropy than one-hot distributions. By adding a loss term that minimizes entropy of predictions during training, we can make areas around datapoints more stable. This method can not, however, be used alone for high-capacity models (deep neural networks), as it causes the training to overfit. Instead, it may be used as a supplementing technique to another SSL technique.
+Consistency regularization methods attempt to push the decision boundary away from clusters and into the low-density regions by stabilizing the model output in a neighborhood around each data point. Entropy minimization is a different technique that attempts to do the same thing. In entropy minimization, we penalize the model for being unsure about its predictions. Low-confidence predictions are predictions with more than one class having non-zero probability. Such probability distributions have higher entropy than one-hot distributions. By adding a loss term that minimizes entropy of predictions during training, we can make areas around datapoints more stable (\cite{EntropyMinimization}). This method can not, however, be used alone for high-capacity models (deep neural networks), as it causes the training to overfit. Instead, it may be used as a supplementing technique to another SSL technique.
 
 
 \section{Generative Methods}
@@ -112,21 +121,28 @@ The last setup involves training the model M1 in the unsupervised way and then t
 
 A newer article by \cite{AdversarialAutoencoders} introduces an architecture, called an Adversarial Autoencoder (AAE). The architecture is in many ways similar to the variational autoencoder, but it differs in the way it regularizes its latent space. Whereas a VAE uses KL-divergence loss to force the latent space into a gaussian distribution, an AAE uses a discriminator network (inspired by generative adversarial networks). This architecture can be used and extended in similar ways to the M1 and M2 models and yields even better results for tasks, such as semi-supervised classification, unsupervised clustering and style-content disentangling.
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=145mm]{../img/aae.png}
+    \caption{Architecture of an adversarial autoencoder. The top two networks form a typical autoencoder with the embedding vector in the middle. The bottom model is a discriminator, forcing the encoder to produce embeddings matching the distribution $p(\mathbf{z})$. The image is taken from \cite{AdversarialAutoencoders}.}
+    \label{fig:AaeArchitecture}
+\end{figure}
+
 
 \subsection{Generative Adversarial Networks}
 
-Generative adversarial network (GAN) is a generative architecture consisting of two parts: a generator and a discriminator. They are trained together in an alternating fashion, where the generator is trained to produce realistic-looking data (to fool the discriminator) and the discriminator is trained to distinguish this generated data from the real-world data. The tension between these two models causes both of them to get increasingly better and the generator ends up producing well-looking synthetic samples. Input to the generator is a latent vector $z$, drawn from a prior distribution (e.g.\@ a gaussian). The generator uses this vector as a seed for the generation. The discriminator outputs a single value, interpreted as the probability of the shown sample being real or generated.
+Generative adversarial network (GAN) is a generative architecture consisting of two parts: a generator and a discriminator (\cite{GAN}). They are trained together in an alternating fashion, where the generator is trained to produce realistic-looking data (to fool the discriminator) and the discriminator is trained to distinguish this generated data from the real-world data. The tension between these two models causes both of them to get increasingly better and the generator ends up producing well-looking synthetic samples. Input to the generator is a latent vector $z$, drawn from a prior distribution (e.g.\@ a gaussian). The generator uses this vector as a seed for the generation. The discriminator outputs a single value, interpreted as the probability of the shown sample being real or generated.
 
 \paragraph*{CatGAN}
-Categorical generative adversarial networks (CatGAN) replace the discriminator with a classifier. The output of this classifier is a softmax layer with C neurons. The discriminative task is transformed onto the classifier by considering its certainty of prediction. In the section on entropy minimization (Section \ref{sec:EntropyMinimization}), we described how certainty of prediction is related to entropy of the predicted distribution, and also how the entropy can be minimized (or maximized) to force the model to be certain (uncertain). In the unsupervised mode, the classifier is trained to output one (any) of the classes for real data points with maximum certainty -- to recognize real samples. The generator is then trained to confuse the classifier to produce uncertain predictions (uniform distribution).
+Categorical generative adversarial networks (CatGAN) replace the discriminator with a classifier (\cite{CatGAN}). The output of this classifier is a softmax layer with C neurons. The discriminative task is transformed onto the classifier by considering its certainty of prediction. In the section on entropy minimization (Section \ref{sec:EntropyMinimization}), we described how certainty of prediction is related to entropy of the predicted distribution, and also how the entropy can be minimized (or maximized) to force the model to be certain (uncertain). In the unsupervised mode, the classifier is trained to output one (any) of the classes for real data points with maximum certainty -- to recognize real samples. The generator is then trained to confuse the classifier to produce uncertain predictions (uniform distribution).
 
 In SSL, the classifier is trained to produce confident predictions of any class for unlabeled data and confident predictions of known class for labeled data. The supervised loss is a categorical cross-entropy (like in a typical classification setup) and the unsupervised loss is an entropy minimization loss (to force confident predictions of any class).
 
 \paragraph*{DCGAN, SGAN}
-Deep Convolutional GANs attempt to learn intermediate representations by training convolutional GANs on unlabeled data. Parts of the generator and discriminator are then re-used as feature extractors for supervised classification task. Semi-supervised GANs (SGAN) address and fix issues with DCGAN, such as the fact that the classifier is trained after the GAN has finished training. SGAN is able to train the generator and classifier simultaneously, substantially improving classification performance.
+Deep Convolutional GANs attempt to learn intermediate representations by training convolutional GANs on unlabeled data (\cite{DCGAN}). Parts of the generator and discriminator are then re-used as feature extractors for supervised classification task. Semi-supervised GANs (SGAN) address and fix issues with DCGAN, such as the fact that the classifier is trained after the GAN has finished training (\cite{SGAN}). SGAN is able to train the generator and classifier simultaneously, substantially improving classification performance.
 
 \paragraph*{BiGAN}
-In a typical GAN, the latent variable $z$ is only used as a seed for the generator and the generator acts as function $G: Z \rightarrow X$. In a variational autoencoder, there exists a full bijection between spaces $X$ and $Z$. BiGANs extend the basic GAN framework by adding an encoder, that acts as a mapping $E: X \rightarrow Z$. This gives us access to the latent vector $z$ of an existing real-world sample $x$. The discriminator is extended to have access to both the data points and the latent points, and so it discriminates between pairs of $(x, E(x))$ and $(G(z), z)$. BiGAN therefore serves a similar role to a variational autoencoder and can be extended for use in semi-supervised learning.
+In a typical GAN, the latent variable $z$ is only used as a seed for the generator and the generator acts as function $G: Z \rightarrow X$. In a variational autoencoder, there exists a full bijection between spaces $X$ and $Z$. BiGANs extend the basic GAN framework by adding an encoder, that acts as a mapping $E: X \rightarrow Z$ (\cite{BiGAN}). This gives us access to the latent vector $z$ of an existing real-world sample $x$. The discriminator is extended to have access to both the data points and the latent points, and so it discriminates between pairs of $(x, E(x))$ and $(G(z), z)$. BiGAN therefore serves a similar role to a variational autoencoder and can be extended for use in semi-supervised learning.
 
 
 \section{Related Methods}

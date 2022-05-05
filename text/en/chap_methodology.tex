@@ -15,7 +15,7 @@ The architecture can be viewed as a fully convolutional autoencoder with residua
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=140mm]{../img/architecture-complete.pdf}
+    \includegraphics[width=145mm]{../img/architecture-complete.pdf}
     \caption{Block diagram, depicting the used architecture. It has 4 levels, with gated skip connections on each level. The network is forked after the second to last layer to provide separate segmentation and reconstruction outputs. Detailed explanation of each block is provided in the figure \ref{fig:ArchitecturePieces}.}
     \label{fig:ArchitectureCombined}
 \end{figure}
@@ -61,7 +61,7 @@ Despite the fact that our experiments' source code lets us easily train multiple
 
 \begin{figure}[p]
     \centering
-    \includegraphics[width=140mm]{../img/architecture-pieces.pdf}
+    \includegraphics[width=145mm]{../img/architecture-pieces.pdf}
     \caption{A recursive block schema of the used architecture. When training and infering segmentation, the input images are cropped directly from the given dataset. When training reconstruction, the input images are overlayed with large, tiled noise that zeroes-out some pixels.}
     \label{fig:ArchitecturePieces}
 \end{figure}

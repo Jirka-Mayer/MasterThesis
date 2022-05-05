@@ -16,7 +16,7 @@ The architecture can be viewed as a fully convolutional autoencoder with residua
 \begin{figure}[ht]
     \centering
     \includegraphics[width=145mm]{../img/architecture-complete.pdf}
-    \caption{Block diagram, depicting the used architecture. It has 4 levels, with gated skip connections on each level. The network is forked after the second to last layer to provide separate segmentation and reconstruction outputs. Detailed explanation of each block is provided in the figure \ref{fig:ArchitecturePieces}.}
+    \caption{Block diagram, depicting the used architecture. It has 4 levels, with gated skip connections on each level. The network is forked after the second to last layer to provide separate segmentation and reconstruction outputs. Detailed explanation of each block is provided in Figure \ref{fig:ArchitecturePieces}.}
     \label{fig:ArchitectureCombined}
 \end{figure}
 
@@ -66,9 +66,9 @@ Despite the fact that our experiments' source code lets us easily train multiple
     \label{fig:ArchitecturePieces}
 \end{figure}
 
-The figure \ref{fig:ArchitecturePieces} contains a recursive block diagram of our extended U-Net architecture. The model takes a single image as the input and produces both the segmentation mask and the reconstructed image. When training segmentation, the reconstructed image is ignored and when training reconstruction, the input image is covered in noise and the output segmentation is ignored.
+Figure \ref{fig:ArchitecturePieces} contains a recursive block diagram of our extended U-Net architecture. The model takes a single image as the input and produces both the segmentation mask and the reconstructed image. When training segmentation, the reconstructed image is ignored and when training reconstruction, the input image is covered in noise and the output segmentation is ignored.
 
-Each level of the network begins and ends with a convolutional block (CB). It consists of two identical 3x3 convolutional layers with an optional dropout layer in between them. Both convolutional blocks on the same level output the same number of feature channels. The number of feature channels is dictated by a hyperparameter we call \emph{inner features}. If the network has 4 inner features, the zero-th level convolutions output 4 feature channels. Each successive level then has twice as many feature channels as the one above it (e.g.\@ 4, 8, 16, 32). The figure \ref{fig:ArchitectureCombined} contains image dimensions and channel counts for each edge in the network. The image dimensions are taken with respect to an input image tile of size 512x256.
+Each level of the network begins and ends with a convolutional block (CB). It consists of two identical 3x3 convolutional layers with an optional dropout layer in between them. Both convolutional blocks on the same level output the same number of feature channels. The number of feature channels is dictated by a hyperparameter we call \emph{inner features}. If the network has 4 inner features, the zero-th level convolutions output 4 feature channels. Each successive level then has twice as many feature channels as the one above it (e.g.\@ 4, 8, 16, 32). Figure \ref{fig:ArchitectureCombined} contains image dimensions and channel counts for each edge in the network. The image dimensions are taken with respect to an input image tile of size 512x256.
 
 The downsampling block is implemented as a 2D max pooling layer (\cite{DeepLearningBook}). The number of feature channels is preserved. If we track the feature count through the encoder, we always first double the number of channels in the convolutional block and then reduce the spatial dimensionality in half in the downsampling block. This way the model can learn to extract higher-level features, before the spatial resolution is lowered. Since the image is two dimensional, halving the resolution shrinks the number of pixels to one quarter. Combined with the doubling of channel count, one encoder level effectively discards half of the image data. This acts as a bottleneck, forcing the network to learn relevant high-level representations.
 

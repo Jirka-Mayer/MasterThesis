@@ -70,7 +70,7 @@ Using such a small batch size is, however, not possible in our case. Our trainin
     \label{fig:SmallBatches}
 \end{figure}
 
-An example of such a failing training can be seen in the figure \ref{fig:SmallBatches}. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
+An example of such a failing training can be seen in Figure \ref{fig:SmallBatches}. The model learns to perform reconstruction even for the segmentation task. This is understandable, since the two tasks are differentiated only at the last layer (1x1 sigmoid convolution). If all second-to-last layer activations contain image reconstruction data, then any 1x1 convolution combination of them will do as well.
 
 Since all of our experiments have training data ratios between 1:0 and 1:10, we chose to set the batch size parameter to 10.
 
@@ -102,7 +102,7 @@ In the chapter about our architecture (Section \ref{sec:Architecture}) we descri
 
 The motivation behind gating skip connections is to bring the U-Net architecture (\cite{UNet}) closer to a more traditional fully-convolutional autoencoder archtiecture (\cite{AutoencodersOverview}).
 
-To measure the effect of skip connections, we propose the following experiment. We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. Training curves are shown in the figure \ref{fig:SkipConnections}.
+To measure the effect of skip connections, we propose the following experiment. We take the 16 \emph{inner feature}, semi-supervised model from experiment \ref{sec:UtilizingCvcMuscima} and train it with various skip connection settings. Training curves are shown in Figure \ref{fig:SkipConnections}.
 
 \begin{figure}[ht]
     \centering
@@ -145,7 +145,7 @@ There are two major noise parameters that can be varied:
     \item Noise dropout ratio (ratio of erased input pixels)
 \end{itemize}
 
-In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution (but not too large). We belive large tiles force the model to learn larger symbols and thus the corresponding high-level representations. This hypothesis is supported by images shown in the figure \ref{fig:NoiseSize}.
+In the section on noise generation (\ref{sec:NoiseGeneration}) we gave reasons for using larger noise resolution (but not too large). We belive large tiles force the model to learn larger symbols and thus the corresponding high-level representations. This hypothesis is supported by images shown in Figure \ref{fig:NoiseSize}.
 
 The first two images show, how the model learns to remove small noise easily. The model, however, does not produce satisfying reconstructions when applied to an image with larger noise tiles dropped (as seen in the second pair of images). We can see that:
 
@@ -157,13 +157,13 @@ The first two images show, how the model learns to remove small noise easily. Th
 
 Comparatively, the lower two images show a much better reconstruction. The lower reconstruction was trained with noise size equal to the size seen in the lower left image. Reconstructed stafflines are sharp even when intersecting the eighth note and there are no tile edges visible (reconstructions blend well with the known image). The model has even managed to conjure up a fake set of stafflines and stems, that connect well to visible noteheads (pointer C). This shows that the model learns much higher-level features than just simple geometric shapes (lines, circles).
 
-We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of the figure \ref{fig:NoiseSize}.
+We ended up training all experiments with noise tiles of size equal to two staff spaces and noise dropout ratio of 25\%. We experimented with noise dropout of 50\%, but the performance seemed not to change. This chosen size and ratio can be seen in the last row of Figure \ref{fig:NoiseSize}.
 
 
 \subsection{Activation Function}
 \label{sec:ActivationFunction}
 
-We first used ReLU activation function (rectified linear unit) in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article (\cite{UNet}). However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) solved these issues. We took inspiration from \cite{DorferEtAl}, who also use the ELU activation function. The difference between the two can be seen in the figure \ref{fig:ActivationFunctions}.
+We first used ReLU activation function (rectified linear unit) in all convolutional layers (except the final sigmoid layer), just like it is used in the original U-Net article (\cite{UNet}). However, we occasionally encountered problems with convergence. Replacing the activation function with ELU (exponential linear unit) solved these issues. We took inspiration from \cite{DorferEtAl}, who also use the ELU activation function. The difference between the two can be seen in Figure \ref{fig:ActivationFunctions}.
 
 \begin{figure}[ht]
     \centering
@@ -228,9 +228,9 @@ All model hyperparameters are set to sensible deafults. The derivation of these 
     \label{fig:ExplorationNoteheads}
 \end{figure}
 
-We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
+We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in Figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
 
-Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it breaks our training process (see Section \ref{sec:BatchSize}) and it likely also has diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
+Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at Figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it breaks our training process (see Section \ref{sec:BatchSize}) and it likely also has diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
 
 The reason for this drop in performance is probably caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
 
@@ -263,7 +263,7 @@ The reason for this drop in performance is probably caused by the fact, that the
         std. dev. & 0.39 & 0.31 & 0.67 & 0.64 \\
         \bottomrule
     \end{tabular}
-    \caption{Values plotted in the figure \ref{fig:ExplorationNoteheadsEvaluation}.}
+    \caption{Values plotted in Figure \ref{fig:ExplorationNoteheadsEvaluation}.}
     \label{tab:ExplorationNoteheads}
 \end{table}
 
@@ -298,7 +298,7 @@ This experiment attempts to compare fully-supervised and semi-supervised models 
 
 Another difference to the previous experiment is that the ratio of labeled to unlabeled data is fixed and given by dataset sizes. The ratio of 99 to 551 pages corresponds best with the ratio 10:50.
 
-The validation dataset F1 score over the course of training can be seen in the figure \ref{fig:CvcImprovements}. In these charts we can see:
+The validation dataset F1 score over the course of training can be seen in Figure \ref{fig:CvcImprovements}. In these charts we can see:
 
 \begin{itemize}
     \item Models with 1 and 2 \emph{inner features} are clearly underfitting in the supervised mode (compared to other models). When we add unlabeled data, their perfomance drops significantly, but the training curve gets much smoother.
@@ -331,7 +331,7 @@ Informed by this failure, we choose to segment stafflines. Firstly, because they
     \label{fig:StafflineTransfer}
 \end{figure}
 
-We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in the figure \ref{fig:StafflineTransfer}.
+We set model capacity to 8 \emph{inner features} and train for 20 epochs. The training process is still relatively noisy (like the failed notehead attempts), so we train both the supervised and semi-supervised variants 4 times each and compute an average. Results can be seen in Figure \ref{fig:StafflineTransfer}.
 
 During the first 7 epochs, both variants perform equally well, however at about the tenth epoch all fully-supervised models start overfitting and their F1 score drops to very low numbers. Interestingly, all the semi-supervised models stay at a comparably high score. They seem to plateau, instead of overfitting. This is a clear example of how the unsupervised data can regularize the training and prevent the model from overfitting. Unfortunately, if we take the best checkpoints of both variants, we see that both variants perform equally well. The semi-supervised model does not surpass the supervised baseline.
 

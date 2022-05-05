@@ -115,7 +115,7 @@ We can see that solid and gated modes have the best performance. The model with 
 
 The gated mode seems to perform worse than the solid one. Despite this, we chose to train all the experiments in this gated mode as we belive it helps the model to learn representations during unsupervised training.
 
-We have to point out, that all of our semi-supervised experiments never exceeded their supervised baselines. This means that bringing the model closer to its supervised setting (using solid skip connections) should increase its performance, because we are bringing it closer to the baseline. For this reason we cannot conclude, what the best skip connection mode would be, if we managed to exceed the baseline. It is possible the order of modes would get reversed. This is another reason why we chose to use gated connections, despite not being optimal in this experiment.
+We have to point out, that all of our semi-supervised experiments never exceeded their supervised baselines. This means that bringing the model closer to its supervised setting (using solid skip connections) should increase its performance, because we are bringing it closer to the baseline. For this reason we cannot conclude, what is the best skip connection mode, should the baseline be exceeded. It is possible that the order of modes is in such case reversed. This is another reason why we chose to use gated connections, despite not being optimal in this experiment.
 
 
 \subsection{Unsupervised Loss Weight}
@@ -183,7 +183,7 @@ The convergence problems were happening at the very beginning of training. The m
 
 Interestingly enough, this problem happens only when training in the fully-supervised mode. We have never encountered it, when training in the semi-supervised mode. This again suggests that unlabeled data act as regularization, damping any extreme gradients, and stabilizing the training.
 
-We also tried using the leaky ReLU function with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ would help, although we already knew that ELU works, so we haven't explored this further.
+We also tried using the leaky ReLU function with parameter $\alpha = 0.01$, however the problem still remained. Maybe a larger value for $\alpha$ could help, although we already knew that ELU works, so we haven't explored this further.
 
 \begin{figure}[ht]
     \centering
@@ -230,7 +230,7 @@ All model hyperparameters are set to sensible deafults. The derivation of these 
 
 We expect that as we add more and more unlabeled data, the F1 score should reach higher and higher. Or at least not get worse. This is not what we see in the figure \ref{fig:ExplorationNoteheads}. The fully supervised model outperforms all the others by a clear margin.
 
-Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it would break our training process (see Section \ref{sec:BatchSize}) and it would likely also have diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
+Focusing only on the semi-supervised models, it seems that adding more unsupervised data maybe helps here, although the three lines end up on top of each other at the epoch 200. A better idea is to look at the figure \ref{fig:ExplorationNoteheadsEvaluation}. The chart contains evaluation results on the test set of six runs of each configuration. We can clearly see how the performance rises with more unsupervised data. Unfortunately it does not reach above the fully-supervised results. We unfortunately cannot push the amount of unlabeled data much higher, as it breaks our training process (see Section \ref{sec:BatchSize}) and it likely also has diminishing returns. The actual numbers are summarized in table \ref{tab:ExplorationNoteheads}.
 
 The reason for this drop in performance is probably caused by the fact, that the supervised model has to only learn one task -- segmentation. Whereas the semi-supervised one has to also learn the unsupervised reconstruction task. This claim is explored in the next section and is supported by the fact that the performance drop disappears when we increase model capacity.
 

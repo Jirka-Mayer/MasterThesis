@@ -1,5 +1,8 @@
 # Semi-supervised learning in Optical Music Recognition
 
+The thesis can be downloaded in PDF from here: [https://dspace.cuni.cz/handle/20.500.11956/173547](https://dspace.cuni.cz/handle/20.500.11956/173547)
+
+
 ## Checklist
 
 - prepare this repository for submission
